@@ -27,12 +27,7 @@ enum PriorityPolicy {
     }
 
     /// Adds newly seen devices to the list and refreshes the stored details of known ones.
-    static func merge(
-        known: [KnownDevice],
-        connected: [AudioDevice],
-        now: Date,
-        lastSeenRefreshInterval: TimeInterval = 3600
-    ) -> MergeResult {
+    static func merge(known: [KnownDevice], connected: [AudioDevice], now: Date) -> MergeResult {
         var list = known
         var added: [AudioDevice] = []
         var changed = false
@@ -40,17 +35,14 @@ enum PriorityPolicy {
 
         for device in connected {
             if let index = list.firstIndex(where: { $0.uid == device.uid }) {
-                if list[index].name != device.name || list[index].transport != device.transport
-                    || now.timeIntervalSince(list[index].lastSeen) > lastSeenRefreshInterval {
+                if list[index].name != device.name || list[index].transport != device.transport {
                     list[index].name = device.name
                     list[index].transport = device.transport
                     list[index].lastSeen = now
                     changed = true
                 }
             } else if let index = list.firstIndex(where: {
-                // The same USB device in a different port gets a new UID; match it by model and name.
-                !connectedUIDs.contains($0.uid) && $0.modelUID != nil
-                    && $0.modelUID == device.modelUID && $0.name == device.name
+                isSameUSBDeviceInAnotherPort(known: $0, device: device, connectedUIDs: connectedUIDs)
             }) {
                 list[index].uid = device.uid
                 list[index].lastSeen = now
@@ -69,6 +61,31 @@ enum PriorityPolicy {
             }
         }
         return MergeResult(list: list, added: added, changed: changed)
+    }
+
+    /// A USB device plugged into a different port gets a new UID (it contains the port location),
+    /// so it is matched by model and name instead. Only USB: Bluetooth UIDs are stable MAC-based,
+    /// and two headsets with the same default name must never take over each other's place.
+    /// Known limitation: two identical USB devices moved between ports may swap places.
+    static func isSameUSBDeviceInAnotherPort(
+        known: KnownDevice, device: AudioDevice, connectedUIDs: Set<String>
+    ) -> Bool {
+        device.transport == kAudioDeviceTransportTypeUSB
+            && known.transport == kAudioDeviceTransportTypeUSB
+            && !connectedUIDs.contains(known.uid)
+            && known.modelUID != nil
+            && known.modelUID == device.modelUID
+            && known.name == device.name
+    }
+
+    /// Stamps `lastSeen` for devices that were connected before and are gone now.
+    static func markDisconnected(_ uids: Set<String>, in list: [KnownDevice], now: Date) -> [KnownDevice] {
+        guard !uids.isEmpty else { return list }
+        return list.map { device in
+            var device = device
+            if uids.contains(device.uid) { device.lastSeen = now }
+            return device
+        }
     }
 
     /// Initial order on first launch: enabled devices first, built-in ones last among them,

@@ -34,7 +34,8 @@ AudioPin fixes this once and for all: you choose the order of your devices, and 
   - System alert sounds follow the selected output.
   - Notifications on every correction.
   - The microphone name shown in the menu bar.
-- **Launch at login**, runs in the background with no Dock icon.
+- **Launch at login** (opt-in), runs in the background with no Dock icon.
+- **Plays nice with fast user switching.** Enforcement pauses while another user's session is active.
 - **No permissions needed.** AudioPin only reads and changes device settings. It never opens a microphone, so macOS does not ask for microphone access.
 
 ## Requirements
@@ -58,7 +59,7 @@ The script does three things:
 2. Assembles and ad-hoc signs `AudioPin.app`.
 3. Copies it to `~/Applications` and launches it.
 
-A pin icon appears in the menu bar. On first launch AudioPin turns on *launch at login*. You can switch this off in Settings.
+A pin icon appears in the menu bar. The first time you open it, AudioPin asks whether it should launch at login. You can change this any time in Settings.
 
 To only build the app bundle without installing it, run `./scripts/build-app.sh`. The app is written to `dist/AudioPin.app`.
 

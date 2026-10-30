@@ -5,10 +5,14 @@ import SwiftUI
 struct MenuBarView: View {
     @Environment(AudioManager.self) private var manager
     @Environment(\.openWindow) private var openWindow
+    @Environment(LoginItem.self) private var loginItem
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             header
+            if !manager.settings.didOfferLaunchAtLogin && !loginItem.isEnabled {
+                LaunchAtLoginOffer()
+            }
             DirectionSection(direction: .output)
             DirectionSection(direction: .input)
             Divider().padding(.horizontal, 4)
@@ -53,7 +57,6 @@ struct MenuBarView: View {
         HStack(spacing: 4) {
             Button {
                 openWindow(id: SettingsWindow.id)
-                AppActivation.showWindow()
             } label: {
                 Label("Ustawienia…", systemImage: "gearshape")
             }
@@ -65,12 +68,14 @@ struct MenuBarView: View {
                 }
             } label: {
                 Image(systemName: "slider.horizontal.3")
+                    .accessibilityLabel("Ustawienia dźwięku macOS")
             }
             .help("Otwórz ustawienia dźwięku macOS")
             Button {
                 NSApp.terminate(nil)
             } label: {
                 Image(systemName: "power")
+                    .accessibilityLabel("Zakończ AudioPin")
             }
             .help("Zakończ AudioPin")
             .keyboardShortcut("q")
@@ -132,6 +137,7 @@ private struct DirectionSection: View {
             .background(.quaternary.opacity(0.5), in: .rect(cornerRadius: 12))
         }
         .onAppear(perform: loadVolume)
+        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { _ in loadVolume() }
         .onChange(of: manager.currentDefault[direction]) { loadVolume() }
     }
 
@@ -174,9 +180,12 @@ private struct DeviceRow: View {
                 }
                 Spacer(minLength: 4)
                 if !device.isEnabled {
-                    Image(systemName: "nosign").foregroundStyle(.secondary).help("Wyłączone z automatycznego wyboru")
+                    Image(systemName: "nosign").foregroundStyle(.secondary)
+                        .help("Wyłączone z automatycznego wyboru")
+                        .accessibilityLabel("Wyłączone z automatycznego wyboru")
                 } else if isCurrent {
                     Image(systemName: "checkmark").fontWeight(.semibold).foregroundStyle(Color.accentColor)
+                        .accessibilityLabel("W użyciu")
                 }
             }
             .padding(.horizontal, 6)
@@ -204,5 +213,32 @@ private struct DeviceRow: View {
         parts.append(DeviceStyle.transportName(device.transport))
         if !device.isEnabled { parts.append("wyłączone") } else if isCurrent { parts.append("w użyciu") }
         return parts.joined(separator: " · ")
+    }
+}
+
+/// One-time question shown in the popover: launch at login is opt-in.
+private struct LaunchAtLoginOffer: View {
+    @Environment(AudioManager.self) private var manager
+    @Environment(LoginItem.self) private var loginItem
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label("Uruchamiać AudioPin po zalogowaniu?", systemImage: "power.circle")
+                .font(.callout.weight(.medium))
+            Text("Bez tego Twoje urządzenia będą pilnowane dopiero po ręcznym otwarciu aplikacji.")
+                .font(.caption).foregroundStyle(.secondary)
+            HStack {
+                Button("Nie teraz") { manager.settings.didOfferLaunchAtLogin = true }
+                Spacer()
+                Button("Włącz") {
+                    loginItem.setEnabled(true)
+                    manager.settings.didOfferLaunchAtLogin = true
+                }
+                .buttonStyle(.glassProminent)
+            }
+            .controlSize(.small)
+        }
+        .padding(10)
+        .background(Color.accentColor.opacity(0.1), in: .rect(cornerRadius: 12))
     }
 }

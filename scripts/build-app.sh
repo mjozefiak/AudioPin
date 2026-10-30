@@ -20,6 +20,7 @@ printf 'APPL????' > "$OUT/Contents/PkgInfo"
 # Ikona (generowana raz i zapisywana w Resources/AppIcon.icns)
 if [[ ! -f Resources/AppIcon.icns ]]; then
   TMP="$(mktemp -d)"
+  trap 'rm -rf "$TMP"' EXIT
   swift scripts/make-icon.swift "$TMP/icon.png"
   ICONSET="$TMP/AppIcon.iconset"; mkdir -p "$ICONSET"
   for s in 16 32 128 256 512; do
@@ -27,7 +28,6 @@ if [[ ! -f Resources/AppIcon.icns ]]; then
     sips -z $((s*2)) $((s*2)) "$TMP/icon.png" --out "$ICONSET/icon_${s}x${s}@2x.png" >/dev/null
   done
   iconutil -c icns "$ICONSET" -o Resources/AppIcon.icns
-  rm -rf "$TMP"
 fi
 cp Resources/AppIcon.icns "$OUT/Contents/Resources/AppIcon.icns"
 
