@@ -122,6 +122,10 @@ scripts/
 ├── build-app.sh           # Builds and signs dist/AudioPin.app
 ├── install.sh             # Builds, installs to ~/Applications, launches
 └── make-icon.swift        # Renders the app icon
+Resources/
+├── Info.plist
+├── Localizable.xcstrings  # String Catalog (English source, Polish translation)
+└── AppIcon.icns
 ```
 
 Development commands:
