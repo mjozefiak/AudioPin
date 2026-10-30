@@ -1,0 +1,809 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "Active": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktywny"
+          }
+        }
+      }
+    },
+    "Activity": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Historia"
+          }
+        }
+      }
+    },
+    "Aggregate": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zbiorcze"
+          }
+        }
+      }
+    },
+    "Alert sounds follow the selected output": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dźwięki systemowe idą za wybranym wyjściem"
+          }
+        }
+      }
+    },
+    "All quiet — AudioPin hasn’t had to correct anything yet.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Na razie spokojnie — AudioPin nie musiał niczego poprawiać."
+          }
+        }
+      }
+    },
+    "AudioPin": {
+      "shouldTranslate": false
+    },
+    "AudioPin Settings": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ustawienia AudioPin"
+          }
+        }
+      }
+    },
+    "Automatic selection": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatyczny wybór"
+          }
+        }
+      }
+    },
+    "Behavior": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Działanie"
+          }
+        }
+      }
+    },
+    "Bluetooth Settings…": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ustawienia Bluetooth…"
+          }
+        }
+      }
+    },
+    "Built-in": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wbudowane"
+          }
+        }
+      }
+    },
+    "Clear": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wyczyść"
+          }
+        }
+      }
+    },
+    "Click to make this your favorite (first in the list)": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kliknij, aby ustawić jako ulubione (pierwsze na liście)"
+          }
+        }
+      }
+    },
+    "Could not switch to %@": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nie udało się ustawić: %@"
+          }
+        }
+      }
+    },
+    "Details": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Szczegóły"
+          }
+        }
+      }
+    },
+    "Drag to reorder": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Przeciągnij, aby zmienić kolejność"
+          }
+        }
+      }
+    },
+    "Drag to reorder. The first connected, enabled device is used. Disabled devices are never selected automatically.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Przeciągnij, aby zmienić kolejność. Używane jest pierwsze podłączone i włączone urządzenie. Wyłączone urządzenia nigdy nie są wybierane automatycznie."
+          }
+        }
+      }
+    },
+    "Exclude from Automatic Selection": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wyłącz z automatycznego wyboru"
+          }
+        }
+      }
+    },
+    "Excluded from automatic selection": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wyłączone z automatycznego wyboru"
+          }
+        }
+      }
+    },
+    "Forget All Disconnected (%lld)": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zapomnij wszystkie odłączone (%lld)"
+          }
+        }
+      }
+    },
+    "Forget Device": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zapomnij urządzenie"
+          }
+        }
+      }
+    },
+    "General": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ogólne"
+          }
+        }
+      }
+    },
+    "IN USE": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "W UŻYCIU"
+          }
+        }
+      }
+    },
+    "In use": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "W użyciu"
+          }
+        }
+      }
+    },
+    "Include in Automatic Selection": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Włącz automatyczny wybór"
+          }
+        }
+      }
+    },
+    "Input": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wejście"
+          }
+        }
+      }
+    },
+    "Keeping your devices pinned": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pilnuje Twoich urządzeń"
+          }
+        }
+      }
+    },
+    "Last seen %@": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ostatnio: %@"
+          }
+        }
+      }
+    },
+    "Make Favorite": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ustaw jako ulubione"
+          }
+        }
+      }
+    },
+    "Menu Preview": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Podgląd menu"
+          }
+        }
+      }
+    },
+    "Microphone Priority": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kolejność mikrofonów"
+          }
+        }
+      }
+    },
+    "Microphone restored": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Przywrócono mikrofon"
+          }
+        }
+      }
+    },
+    "Microphones": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mikrofony"
+          }
+        }
+      }
+    },
+    "More Options": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Więcej opcji"
+          }
+        }
+      }
+    },
+    "Move Down": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Przesuń niżej"
+          }
+        }
+      }
+    },
+    "Move Up": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Przesuń wyżej"
+          }
+        }
+      }
+    },
+    "New Bluetooth microphones (such as AirPods) and iPhone microphones start disabled.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nowe mikrofony Bluetooth (np. AirPods) i iPhone'a są domyślnie wyłączone."
+          }
+        }
+      }
+    },
+    "New device: %@": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nowe urządzenie: %@"
+          }
+        }
+      }
+    },
+    "No connected devices": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Brak podłączonych urządzeń"
+          }
+        }
+      }
+    },
+    "Not Now": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nie teraz"
+          }
+        }
+      }
+    },
+    "Notifications are turned off. Allow them in System Settings → Notifications.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Powiadomienia są zablokowane. Zezwól na nie w Ustawieniach systemowych → Powiadomienia."
+          }
+        }
+      }
+    },
+    "Notify on every correction": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Powiadomienie przy każdej korekcie"
+          }
+        }
+      }
+    },
+    "Open": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Otwórz"
+          }
+        }
+      }
+    },
+    "Open AudioPin at login?": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uruchamiać AudioPin po zalogowaniu?"
+          }
+        }
+      }
+    },
+    "Open at login": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uruchamiaj po zalogowaniu"
+          }
+        }
+      }
+    },
+    "Open macOS Sound Settings": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Otwórz ustawienia dźwięku macOS"
+          }
+        }
+      }
+    },
+    "Other": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inne"
+          }
+        }
+      }
+    },
+    "Otherwise your devices are only pinned after you open the app yourself.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bez tego Twoje urządzenia będą pilnowane dopiero po ręcznym otwarciu aplikacji."
+          }
+        }
+      }
+    },
+    "Output": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wyjście"
+          }
+        }
+      }
+    },
+    "Output Priority": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kolejność wyjść dźwięku"
+          }
+        }
+      }
+    },
+    "Pause AudioPin": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wstrzymaj pilnowanie urządzeń"
+          }
+        }
+      }
+    },
+    "Paused — macOS chooses devices": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wstrzymany — system wybiera sam"
+          }
+        }
+      }
+    },
+    "Pin audio devices": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pilnuj urządzeń audio"
+          }
+        }
+      }
+    },
+    "Pin input (microphones)": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pilnuj wejścia (mikrofony)"
+          }
+        }
+      }
+    },
+    "Pin output (speakers, headphones)": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pilnuj wyjścia (głośniki, słuchawki)"
+          }
+        }
+      }
+    },
+    "Pinned · %lld corrections this session": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pilnuje · korekty w tej sesji: %lld"
+          }
+        }
+      }
+    },
+    "Pinned · 1 correction this session": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pilnuje · 1 korekta w tej sesji"
+          }
+        }
+      }
+    },
+    "Quit AudioPin": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zakończ AudioPin"
+          }
+        }
+      }
+    },
+    "Recent Activity": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ostatnie zdarzenia"
+          }
+        }
+      }
+    },
+    "Resume AudioPin": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wznów pilnowanie urządzeń"
+          }
+        }
+      }
+    },
+    "Set as favorite: %@": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ustawiono jako ulubione: %@"
+          }
+        }
+      }
+    },
+    "Settings…": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ustawienia…"
+          }
+        }
+      }
+    },
+    "Show microphone name in the menu bar": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pokazuj nazwę mikrofonu w pasku menu"
+          }
+        }
+      }
+    },
+    "Sound output restored": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Przywrócono wyjście dźwięku"
+          }
+        }
+      }
+    },
+    "Speakers & Headphones": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Głośniki i słuchawki"
+          }
+        }
+      }
+    },
+    "Startup": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uruchamianie"
+          }
+        }
+      }
+    },
+    "The system keeps switching devices — pausing corrections for 30 s": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "System ciągle przełącza urządzenie — wstrzymuję korekty na 30 s"
+          }
+        }
+      }
+    },
+    "Tip: in Zoom, Teams or Discord choose “Same as System” for the microphone and speaker, so these apps follow AudioPin too.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wskazówka: w Zoom, Teams czy Discord wybierz mikrofon „Taki jak systemowy”, żeby te aplikacje też korzystały z urządzeń wybranych przez AudioPin."
+          }
+        }
+      }
+    },
+    "Turn On": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Włącz"
+          }
+        }
+      }
+    },
+    "Turn off to never select automatically": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wyłącz — nigdy nie wybieraj automatycznie"
+          }
+        }
+      }
+    },
+    "Unknown Device": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nieznane urządzenie"
+          }
+        }
+      }
+    },
+    "Virtual": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wirtualne"
+          }
+        }
+      }
+    },
+    "When macOS switches a device (for example after you connect AirPods), AudioPin immediately restores the first connected, enabled device from your list.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gdy macOS przełączy urządzenie (np. po podłączeniu AirPods), AudioPin od razu przywróci pierwsze dostępne i włączone urządzenie z Twojej listy."
+          }
+        }
+      }
+    },
+    "another device": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "inne urządzenie"
+          }
+        }
+      }
+    },
+    "connected": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "podłączone"
+          }
+        }
+      }
+    },
+    "disabled": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "wyłączone"
+          }
+        }
+      }
+    },
+    "in use": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "w użyciu"
+          }
+        }
+      }
+    },
+    "macOS Sound Settings": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ustawienia dźwięku macOS"
+          }
+        }
+      }
+    },
+    "macOS Sound Settings…": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ustawienia dźwięku macOS…"
+          }
+        }
+      }
+    },
+    "macOS needs your approval in System Settings.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS wymaga zatwierdzenia w Ustawieniach systemowych."
+          }
+        }
+      }
+    },
+    "not pinned": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "bez pilnowania"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

@@ -1,7 +1,7 @@
 import CoreAudio
 import Foundation
 
-/// Ikony i opisy urządzeń.
+/// SF Symbols and labels for device types.
 enum DeviceStyle {
     static func symbol(name: String, transport: UInt32, direction: Direction) -> String {
         let lower = name.lowercased()
@@ -30,27 +30,26 @@ enum DeviceStyle {
 
     static func transportName(_ transport: UInt32) -> String {
         switch transport {
-        case kAudioDeviceTransportTypeBuiltIn: "Wbudowane"
+        case kAudioDeviceTransportTypeBuiltIn: String(localized: "Built-in")
         case kAudioDeviceTransportTypeUSB: "USB"
         case kAudioDeviceTransportTypeBluetooth, kAudioDeviceTransportTypeBluetoothLE: "Bluetooth"
         case kAudioDeviceTransportTypeHDMI: "HDMI"
         case kAudioDeviceTransportTypeDisplayPort: "DisplayPort"
         case kAudioDeviceTransportTypeAirPlay: "AirPlay"
         case kAudioDeviceTransportTypeThunderbolt: "Thunderbolt"
-        case kAudioDeviceTransportTypeVirtual: "Wirtualne"
-        case kAudioDeviceTransportTypeAggregate, kAudioDeviceTransportTypeAutoAggregate: "Zbiorcze"
+        case kAudioDeviceTransportTypeVirtual: String(localized: "Virtual")
+        case kAudioDeviceTransportTypeAggregate, kAudioDeviceTransportTypeAutoAggregate: String(localized: "Aggregate")
         case kAudioDeviceTransportTypeContinuityCaptureWired,
              kAudioDeviceTransportTypeContinuityCaptureWireless: "iPhone (Continuity)"
         case kAudioDeviceTransportTypePCI: "PCI"
         case kAudioDeviceTransportTypeFireWire: "FireWire"
-        default: "Inne"
+        default: String(localized: "Other")
         }
     }
 
+    /// "Last seen 2 hours ago", in the user's language.
     static func lastSeen(_ date: Date) -> String {
-        let formatter = RelativeDateTimeFormatter()
-        formatter.locale = Locale(identifier: "pl_PL")
-        formatter.unitsStyle = .full
-        return "Ostatnio: " + formatter.localizedString(for: date, relativeTo: Date())
+        let relative = date.formatted(.relative(presentation: .named))
+        return String(localized: "Last seen \(relative)")
     }
 }

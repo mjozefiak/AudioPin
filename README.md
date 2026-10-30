@@ -122,6 +122,10 @@ scripts/
 ├── build-app.sh           # Builds and signs dist/AudioPin.app
 ├── install.sh             # Builds, installs to ~/Applications, launches
 └── make-icon.swift        # Renders the app icon
+Resources/
+├── Info.plist
+├── Localizable.xcstrings  # String Catalog (English source, Polish translation)
+└── AppIcon.icns
 ```
 
 Development commands:
@@ -130,6 +134,24 @@ Development commands:
 swift build                 # debug build
 swift test                  # unit tests (no real audio devices are touched)
 ./scripts/build-app.sh      # release app bundle
+```
+
+## Localization
+
+AudioPin is available in **English** and **Polish**, and follows the macOS language setting. Strings live in a String Catalog, `Resources/Localizable.xcstrings`, which `build-app.sh` compiles into the app bundle.
+
+To add a language:
+
+1. Open `Resources/Localizable.xcstrings` in Xcode.
+2. Add the language and translate the strings.
+3. Add the language code to `CFBundleLocalizations` in `Resources/Info.plist`.
+
+To pick up new strings from code, regenerate the catalog keys:
+
+```bash
+swift build --scratch-path /tmp/audiopin-loc -Xswiftc -emit-localized-strings \
+  -Xswiftc -emit-localized-strings-path -Xswiftc /tmp/audiopin-loc/strings
+xcrun xcstringstool sync Resources/Localizable.xcstrings --stringsdata /tmp/audiopin-loc/strings/*.stringsdata
 ```
 
 ## Limitations

@@ -69,7 +69,7 @@ struct AudioPinApp: App {
         }
         .menuBarExtraStyle(.window)
 
-        Window("Ustawienia AudioPin", id: SettingsWindow.id) {
+        Window("AudioPin Settings", id: SettingsWindow.id) {
             SettingsWindow()
                 .environment(delegate.manager)
                 .environment(delegate.loginItem)
@@ -79,7 +79,7 @@ struct AudioPinApp: App {
         .restorationBehavior(.disabled)
 
         #if DEBUG
-        Window("Podgląd menu", id: "menu-preview") {
+        Window("Menu Preview", id: "menu-preview") {
             MenuBarView()
                 .environment(delegate.manager)
                 .environment(delegate.loginItem)

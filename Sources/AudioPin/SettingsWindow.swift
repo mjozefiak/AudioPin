@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-/// Okno ustawień: ogólne, priorytety wyjścia, priorytety wejścia, historia.
+/// Settings window: general options, output and input priorities, activity log.
 struct SettingsWindow: View {
     static let id = "settings"
 
@@ -10,10 +10,10 @@ struct SettingsWindow: View {
         var id: String { rawValue }
         var title: String {
             switch self {
-            case .general: "Ogólne"
-            case .output: "Wyjście"
-            case .input: "Wejście"
-            case .activity: "Historia"
+            case .general: String(localized: "General")
+            case .output: String(localized: "Output")
+            case .input: String(localized: "Input")
+            case .activity: String(localized: "Activity")
             }
         }
         var symbol: String {
@@ -51,7 +51,7 @@ struct SettingsWindow: View {
     }
 }
 
-// MARK: Ogólne
+// MARK: General
 
 private struct GeneralPane: View {
     @Environment(AudioManager.self) private var manager
@@ -62,29 +62,29 @@ private struct GeneralPane: View {
         @Bindable var manager = manager
         Form {
             Section {
-                Toggle("Pilnuj urządzeń audio", isOn: $manager.settings.isActive)
-                Toggle("Pilnuj wyjścia (głośniki, słuchawki)", isOn: $manager.settings.enforceOutput)
+                Toggle("Pin audio devices", isOn: $manager.settings.isActive)
+                Toggle("Pin output (speakers, headphones)", isOn: $manager.settings.enforceOutput)
                     .disabled(!manager.settings.isActive)
-                Toggle("Pilnuj wejścia (mikrofony)", isOn: $manager.settings.enforceInput)
+                Toggle("Pin input (microphones)", isOn: $manager.settings.enforceInput)
                     .disabled(!manager.settings.isActive)
             } header: {
-                Text("Działanie")
+                Text("Behavior")
             } footer: {
-                Text("Gdy macOS przełączy urządzenie (np. po podłączeniu AirPods), AudioPin od razu przywróci pierwsze dostępne i włączone urządzenie z Twojej listy.")
+                Text("When macOS switches a device (for example after you connect AirPods), AudioPin immediately restores the first connected, enabled device from your list.")
                     .foregroundStyle(.secondary)
             }
 
-            Section("Uruchamianie") {
-                Toggle("Uruchamiaj po zalogowaniu", isOn: Binding(
+            Section("Startup") {
+                Toggle("Open at login", isOn: Binding(
                     get: { loginItem.isEnabled || loginItem.needsApproval },
                     set: { loginItem.setEnabled($0) }
                 ))
                 if loginItem.needsApproval {
                     HStack {
-                        Text("macOS wymaga zatwierdzenia w Ustawieniach systemowych.")
+                        Text("macOS needs your approval in System Settings.")
                             .foregroundStyle(.orange)
                         Spacer()
-                        Button("Otwórz") { loginItem.openSystemSettings() }
+                        Button("Open") { loginItem.openSystemSettings() }
                     }
                 }
                 if let error = loginItem.lastError {
@@ -92,9 +92,9 @@ private struct GeneralPane: View {
                 }
             }
 
-            Section("Szczegóły") {
-                Toggle("Dźwięki systemowe idą za wybranym wyjściem", isOn: $manager.settings.alertSoundsFollowOutput)
-                Toggle("Powiadomienie przy każdej korekcie", isOn: $manager.settings.notifyOnCorrection)
+            Section("Details") {
+                Toggle("Alert sounds follow the selected output", isOn: $manager.settings.alertSoundsFollowOutput)
+                Toggle("Notify on every correction", isOn: $manager.settings.notifyOnCorrection)
                     .onChange(of: manager.settings.notifyOnCorrection) { _, on in
                         guard on else { return }
                         Task {
@@ -105,23 +105,23 @@ private struct GeneralPane: View {
                         }
                     }
                 if notificationsDenied {
-                    Text("Powiadomienia są zablokowane. Zezwól na nie w Ustawieniach systemowych → Powiadomienia.")
+                    Text("Notifications are turned off. Allow them in System Settings → Notifications.")
                         .font(.caption).foregroundStyle(.orange)
                 }
-                Toggle("Pokazuj nazwę mikrofonu w pasku menu", isOn: $manager.settings.showNameInMenuBar)
+                Toggle("Show microphone name in the menu bar", isOn: $manager.settings.showNameInMenuBar)
             }
 
             Section {
                 HStack {
-                    Button("Ustawienia dźwięku macOS…") {
+                    Button("macOS Sound Settings…") {
                         open("x-apple.systempreferences:com.apple.Sound-Settings.extension")
                     }
-                    Button("Ustawienia Bluetooth…") {
+                    Button("Bluetooth Settings…") {
                         open("x-apple.systempreferences:com.apple.BluetoothSettings")
                     }
                 }
             } footer: {
-                Text("Wskazówka: w Zoom, Teams czy Discord wybierz mikrofon „Taki jak systemowy”, żeby te aplikacje też korzystały z urządzeń wybranych przez AudioPin.")
+                Text("Tip: in Zoom, Teams or Discord choose “Same as System” for the microphone and speaker, so these apps follow AudioPin too.")
                     .foregroundStyle(.secondary)
             }
         }
@@ -134,7 +134,7 @@ private struct GeneralPane: View {
     }
 }
 
-// MARK: Priorytety
+// MARK: Priorities
 
 private struct PriorityPane: View {
     @Environment(AudioManager.self) private var manager
@@ -154,12 +154,12 @@ private struct PriorityPane: View {
                 }
                 .frame(minHeight: CGFloat(max(list.count, 1)) * 52)
             } header: {
-                Text("Kolejność \(direction == .input ? "mikrofonów" : "wyjść dźwięku")")
+                Text(direction == .input ? String(localized: "Microphone Priority") : String(localized: "Output Priority"))
             } footer: {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Przeciągnij, aby zmienić kolejność. Używane jest pierwsze podłączone i włączone urządzenie. Wyłączone urządzenia nigdy nie są wybierane automatycznie.")
+                    Text("Drag to reorder. The first connected, enabled device is used. Disabled devices are never selected automatically.")
                     if direction == .input {
-                        Text("Nowe mikrofony Bluetooth (np. AirPods) i iPhone'a są domyślnie wyłączone.")
+                        Text("New Bluetooth microphones (such as AirPods) and iPhone microphones start disabled.")
                     }
                 }
                 .foregroundStyle(.secondary)
@@ -167,7 +167,7 @@ private struct PriorityPane: View {
 
             if !inactive.isEmpty {
                 Section {
-                    Button("Zapomnij wszystkie odłączone (\(inactive.count))", role: .destructive) {
+                    Button("Forget All Disconnected (\(inactive.count))", role: .destructive) {
                         manager.forget(Set(inactive.map(\.uid)), direction)
                     }
                 }
@@ -190,8 +190,8 @@ private struct PriorityRow: View {
         HStack(spacing: 12) {
             Image(systemName: "line.3.horizontal")
                 .foregroundStyle(.tertiary)
-                .help("Przeciągnij, aby zmienić kolejność")
-            Text("\(rank)")
+                .help("Drag to reorder")
+            Text(rank, format: .number)
                 .font(.callout.monospacedDigit().weight(.semibold))
                 .foregroundStyle(.secondary)
                 .frame(width: 18)
@@ -206,7 +206,7 @@ private struct PriorityRow: View {
                     Text(device.name).fontWeight(.medium)
                         .strikethrough(!device.isEnabled, color: .secondary)
                     if isCurrent {
-                        Text("W UŻYCIU")
+                        Text("IN USE")
                             .font(.caption2.weight(.bold))
                             .padding(.horizontal, 6).padding(.vertical, 2)
                             .background(Color.accentColor.opacity(0.18), in: .capsule)
@@ -217,24 +217,26 @@ private struct PriorityRow: View {
             }
             .opacity(connected ? 1 : 0.6)
             Spacer()
-            Toggle("Automatyczny wybór", isOn: Binding(
+            Toggle("Automatic selection", isOn: Binding(
                 get: { device.isEnabled },
                 set: { manager.setEnabled($0, uid: device.uid, direction) }
             ))
             .labelsHidden()
             .toggleStyle(.switch)
             .controlSize(.small)
-            .help(device.isEnabled ? "Wyłącz — nigdy nie wybieraj automatycznie" : "Włącz automatyczny wybór")
+            .help(device.isEnabled
+                ? String(localized: "Turn off to never select automatically")
+                : String(localized: "Include in Automatic Selection"))
             Menu {
-                Button("Ustaw jako ulubione") { manager.makeTopPriority(device.uid, direction) }
-                Button("Przesuń wyżej") { manager.move(device.uid, direction, by: -1) }
-                Button("Przesuń niżej") { manager.move(device.uid, direction, by: 1) }
+                Button("Make Favorite") { manager.makeTopPriority(device.uid, direction) }
+                Button("Move Up") { manager.move(device.uid, direction, by: -1) }
+                Button("Move Down") { manager.move(device.uid, direction, by: 1) }
                 Divider()
-                Button("Zapomnij urządzenie", role: .destructive) { manager.forget([device.uid], direction) }
+                Button("Forget Device", role: .destructive) { manager.forget([device.uid], direction) }
                     .disabled(connected)
             } label: {
                 Image(systemName: "ellipsis.circle")
-                    .accessibilityLabel("Więcej opcji")
+                    .accessibilityLabel("More Options")
             }
             .menuStyle(.borderlessButton)
             .menuIndicator(.hidden)
@@ -245,13 +247,13 @@ private struct PriorityRow: View {
 
     private var subtitle: String {
         var parts = [DeviceStyle.transportName(device.transport)]
-        if !device.isEnabled { parts.append("wyłączone") }
-        parts.append(connected ? "podłączone" : DeviceStyle.lastSeen(device.lastSeen))
+        if !device.isEnabled { parts.append(String(localized: "disabled")) }
+        parts.append(connected ? String(localized: "connected") : DeviceStyle.lastSeen(device.lastSeen))
         return parts.joined(separator: " · ")
     }
 }
 
-// MARK: Historia
+// MARK: Activity
 
 private struct ActivityPane: View {
     @Environment(AudioManager.self) private var manager
@@ -260,7 +262,7 @@ private struct ActivityPane: View {
         Form {
             Section {
                 if manager.activity.isEmpty {
-                    Text("Na razie spokojnie — AudioPin nie musiał niczego poprawiać.")
+                    Text("All quiet — AudioPin hasn’t had to correct anything yet.")
                         .foregroundStyle(.secondary)
                 }
                 ForEach(manager.activity) { entry in
@@ -277,10 +279,10 @@ private struct ActivityPane: View {
                 }
             } header: {
                 HStack {
-                    Text("Ostatnie zdarzenia")
+                    Text("Recent Activity")
                     Spacer()
                     if !manager.activity.isEmpty {
-                        Button("Wyczyść") { manager.clearActivity() }.buttonStyle(.link)
+                        Button("Clear") { manager.clearActivity() }.buttonStyle(.link)
                     }
                 }
             }

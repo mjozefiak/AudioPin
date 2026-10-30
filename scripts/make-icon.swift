@@ -1,5 +1,5 @@
 import AppKit
-// Rysuje ikonę 1024×1024: gradientowy squircle z symbolem pinezki i fali dźwięku.
+// Renders the 1024×1024 app icon: a gradient squircle with a pin over a waveform.
 let size: CGFloat = 1024
 let image = NSImage(size: NSSize(width: size, height: size), flipped: false) { rect in
     let inset = rect.insetBy(dx: 100, dy: 100)
@@ -10,7 +10,7 @@ let image = NSImage(size: NSSize(width: size, height: size), flipped: false) { r
     NSGradient(colors: [NSColor(red: 0.36, green: 0.42, blue: 1.0, alpha: 1), NSColor(red: 0.62, green: 0.25, blue: 0.95, alpha: 1)])!
         .draw(in: path, angle: -60)
     NSGraphicsContext.current?.restoreGraphicsState()
-    // delikatny połysk u góry
+    // subtle highlight at the top
     NSGraphicsContext.current?.saveGraphicsState()
     path.addClip()
     NSGradient(colors: [NSColor.white.withAlphaComponent(0.28), NSColor.white.withAlphaComponent(0)])!
