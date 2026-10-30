@@ -36,21 +36,6 @@ struct AppSettings: Codable, Equatable, Sendable {
     func enforces(_ direction: Direction) -> Bool {
         direction == .input ? enforceInput : enforceOutput
     }
-
-    private static let key = "AudioPin.settings.v1"
-
-    static func load() -> AppSettings {
-        guard let data = UserDefaults.standard.data(forKey: key),
-              let settings = try? JSONDecoder().decode(AppSettings.self, from: data)
-        else { return AppSettings() }
-        return settings
-    }
-
-    func save() {
-        if let data = try? JSONEncoder().encode(self) {
-            UserDefaults.standard.set(data, forKey: Self.key)
-        }
-    }
 }
 
 extension UInt32 {

@@ -1,9 +1,8 @@
-import AppKit
 import CoreAudio
 import Foundation
 import Observation
 
-/// Wpis w historii działań aplikacji.
+/// One entry in the in-app activity log.
 struct ActivityEntry: Identifiable, Sendable {
     let id = UUID()
     let date: Date
@@ -11,54 +10,82 @@ struct ActivityEntry: Identifiable, Sendable {
     let message: String
 }
 
-/// Serce aplikacji: śledzi urządzenia i pilnuje, żeby domyślne było to z najwyższym priorytetem.
+/// Keeps the system defaults in line with the user's priority lists.
+///
+/// Owns UI-facing state (connected devices, current defaults, activity log) and orchestrates
+/// the work: the selection rules live in `PriorityPolicy`, rate limiting in `CorrectionLimiter`,
+/// hardware access behind `AudioSystem` and persistence behind `SettingsStore`.
 @MainActor
 @Observable
 final class AudioManager {
+    /// Timing of the enforcement loop.
+    enum Timing {
+        static let settingsChangeDelay: Duration = .milliseconds(50)
+        static let defaultChangeDelay: Duration = .milliseconds(150)
+        static let deviceListChangeDelay: Duration = .milliseconds(300)
+        static let wakeDelay: Duration = .seconds(1)
+        /// Extra checks after a device connects or disconnects (macOS often switches late).
+        static let watchCheckpoints: [Duration] = [.milliseconds(800), .milliseconds(1600), .seconds(3), .seconds(5)]
+        /// Extra checks after each correction (Bluetooth may switch again after renegotiating).
+        static let verificationDelays: [Duration] = [.seconds(1), .seconds(3)]
+        static let flashDuration: Duration = .seconds(2.5)
+    }
+
+    static let maxActivityEntries = 50
+
     private(set) var connected: [Direction: [AudioDevice]] = [.input: [], .output: []]
     private(set) var currentDefault: [Direction: AudioObjectID] = [:]
     private(set) var activity: [ActivityEntry] = []
     private(set) var correctionCount = 0
+    private(set) var isFlashing = false
 
     var settings: AppSettings {
         didSet {
             guard settings != oldValue else { return }
-            settings.save()
-            scheduleReconcile(delay: .milliseconds(50))
+            store.save(settings)
+            scheduleReconcile(delay: Timing.settingsChangeDelay)
         }
     }
 
-    @ObservationIgnored private let listener = HALListener()
-    @ObservationIgnored private var pendingReconcile: Task<Void, Never>?
-    @ObservationIgnored private var verifyTasks: [Direction: Task<Void, Never>] = [:]
-    /// Znaczniki czasu naszych korekt (do ograniczenia walki z systemem).
-    @ObservationIgnored private var corrections: [Direction: [Date]] = [:]
-    @ObservationIgnored private var backoffUntil: [Direction: Date] = [:]
-    @ObservationIgnored private var wakeObserver: NSObjectProtocol?
     @ObservationIgnored var onCorrection: ((Direction, String) -> Void)?
 
-    init() {
-        settings = AppSettings.load()
+    @ObservationIgnored private let system: any AudioSystem
+    @ObservationIgnored private let store: any SettingsStore
+    @ObservationIgnored private let clock = ContinuousClock()
+    @ObservationIgnored private var limiter = CorrectionLimiter()
+    @ObservationIgnored private var pendingReconcile: Task<Void, Never>?
+    @ObservationIgnored private var watchTask: Task<Void, Never>?
+    @ObservationIgnored private var verifyTasks: [Direction: Task<Void, Never>] = [:]
+    @ObservationIgnored private var flashTask: Task<Void, Never>?
+
+    init(system: any AudioSystem = CoreAudioSystem(), store: any SettingsStore = UserDefaultsSettingsStore()) {
+        self.system = system
+        self.store = store
+        settings = store.load()
     }
 
     func start() {
         refreshDevices()
         if !settings.didRunOnboarding { seedInitialPriorities() }
-        listener.start { [weak self] selector in
+        system.startListening { [weak self] selector in
             Task { @MainActor in self?.handleHALChange(selector) }
-        }
-        wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
-            forName: NSWorkspace.didWakeNotification, object: nil, queue: .main
-        ) { [weak self] _ in
-            Task { @MainActor in
-                self?.backoffUntil.removeAll()
-                self?.scheduleReconcile(delay: .seconds(1))
-            }
         }
         reconcile()
     }
 
-    // MARK: Odczyt stanu
+    func stop() {
+        system.stopListening()
+        [pendingReconcile, watchTask, flashTask].forEach { $0?.cancel() }
+        verifyTasks.values.forEach { $0.cancel() }
+    }
+
+    /// After sleep the hardware may have changed; clear the back-off and check again.
+    func systemDidWake() {
+        limiter.reset()
+        scheduleReconcile(delay: Timing.wakeDelay)
+    }
+
+    // MARK: Reading state
 
     func devices(_ direction: Direction) -> [AudioDevice] { connected[direction] ?? [] }
 
@@ -71,42 +98,33 @@ final class AudioManager {
         return devices(direction).first { $0.objectID == id }
     }
 
-    /// Urządzenie, które aplikacja chce mieć jako domyślne.
+    /// The device AudioPin wants as the default.
     func preferredDevice(_ direction: Direction) -> AudioDevice? {
-        let available = devices(direction)
-        for known in settings.priority(direction) where known.isEnabled {
-            if let device = available.first(where: { $0.uid == known.uid }) { return device }
-        }
-        return nil
+        PriorityPolicy.preferred(priority: settings.priority(direction), connected: devices(direction))
     }
 
     func volume(_ direction: Direction) -> Float? {
         guard let id = currentDefault[direction] else { return nil }
-        return AudioHAL.volume(id, direction)
+        return system.volume(id, direction)
     }
 
     func setVolume(_ value: Float, _ direction: Direction) {
         guard let id = currentDefault[direction] else { return }
-        AudioHAL.setVolume(id, direction, value)
+        system.setVolume(id, direction, value)
     }
 
-    // MARK: Akcje użytkownika
+    // MARK: User actions
 
-    /// Przenosi urządzenie na górę listy i włącza je (wybór z menu).
+    /// Moves the device to the top of the list and enables it (picked from the menu).
     func makeTopPriority(_ uid: String, _ direction: Direction) {
-        var list = settings.priority(direction)
-        guard let index = list.firstIndex(where: { $0.uid == uid }) else { return }
-        var item = list.remove(at: index)
-        item.isEnabled = true
-        list.insert(item, at: 0)
+        guard let list = PriorityPolicy.promote(uid, in: settings.priority(direction)) else { return }
         settings.setPriority(list, for: direction)
-        backoffUntil[direction] = nil
-        log(direction, "Ustawiono jako ulubione: \(item.name)")
+        limiter.reset(direction)
+        log(direction, "Ustawiono jako ulubione: \(list[0].name)")
     }
 
     func move(_ direction: Direction, from source: IndexSet, to destination: Int) {
-        var list = settings.priority(direction)
-        list.move(fromOffsets: source, toOffset: destination)
+        let list = PriorityPolicy.move(settings.priority(direction), fromOffsets: source, toOffset: destination)
         settings.setPriority(list, for: direction)
     }
 
@@ -134,31 +152,13 @@ final class AudioManager {
 
     func clearActivity() { activity.removeAll() }
 
-    // MARK: Logika
+    // MARK: Enforcement
 
-    private func handleHALChange(_ selector: AudioObjectPropertySelector) {
-        refreshDefaults()
-        // Zmiana listy urządzeń: daj systemowi chwilę, Bluetooth zgłasza się kilkoma zdarzeniami.
-        if selector == kAudioHardwarePropertyDevices {
-            scheduleReconcile(delay: .milliseconds(300))
-            scheduleWatchWindow()
-        } else {
-            scheduleReconcile(delay: .milliseconds(150))
-        }
-    }
-
-    /// Po podłączeniu/odłączeniu macOS często przełącza urządzenie z opóźnieniem — sprawdzamy kilka razy.
-    @ObservationIgnored private var watchTask: Task<Void, Never>?
-    private func scheduleWatchWindow() {
-        watchTask?.cancel()
-        watchTask = Task { [weak self] in
-            var elapsed = Duration.zero
-            for checkpoint in [Duration.milliseconds(800), .milliseconds(1600), .seconds(3), .seconds(5)] {
-                try? await Task.sleep(for: checkpoint - elapsed)
-                elapsed = checkpoint
-                guard !Task.isCancelled else { return }
-                self?.reconcile()
-            }
+    func reconcile() {
+        refreshDevices()
+        guard settings.isActive else { return }
+        for direction in Direction.allCases where settings.enforces(direction) {
+            enforce(direction)
         }
     }
 
@@ -171,128 +171,106 @@ final class AudioManager {
         }
     }
 
+    private func handleHALChange(_ selector: AudioObjectPropertySelector) {
+        refreshDefaults()
+        // Bluetooth devices announce themselves with several events; give the system a moment.
+        if selector == kAudioHardwarePropertyDevices {
+            scheduleReconcile(delay: Timing.deviceListChangeDelay)
+            scheduleWatchWindow()
+        } else {
+            scheduleReconcile(delay: Timing.defaultChangeDelay)
+        }
+    }
+
+    private func scheduleWatchWindow() {
+        watchTask?.cancel()
+        watchTask = Task { [weak self] in
+            var elapsed = Duration.zero
+            for checkpoint in Timing.watchCheckpoints {
+                try? await Task.sleep(for: checkpoint - elapsed)
+                elapsed = checkpoint
+                guard !Task.isCancelled else { return }
+                self?.reconcile()
+            }
+        }
+    }
+
+    private func scheduleVerification(_ direction: Direction) {
+        verifyTasks[direction]?.cancel()
+        verifyTasks[direction] = Task { [weak self] in
+            var elapsed = Duration.zero
+            for delay in Timing.verificationDelays {
+                try? await Task.sleep(for: delay - elapsed)
+                elapsed = delay
+                guard !Task.isCancelled, let self else { return }
+                self.refreshDefaults()
+                if self.settings.isActive, self.settings.enforces(direction) {
+                    self.enforce(direction)
+                }
+            }
+        }
+    }
+
     private func refreshDefaults() {
         for direction in Direction.allCases {
-            currentDefault[direction] = AudioHAL.defaultDeviceID(direction)
+            currentDefault[direction] = system.defaultDeviceID(direction)
         }
     }
 
     private func refreshDevices() {
         for direction in Direction.allCases {
-            let list = AudioHAL.devices(direction)
+            let list = system.devices(direction)
             connected[direction] = list
             register(list, direction)
         }
         refreshDefaults()
     }
 
-    /// Dopisuje nowe urządzenia do listy i aktualizuje dane znanych.
     private func register(_ devices: [AudioDevice], _ direction: Direction) {
-        var list = settings.priority(direction)
-        var changed = false
-        let connectedUIDs = Set(devices.map(\.uid))
-
-        for device in devices {
-            if let index = list.firstIndex(where: { $0.uid == device.uid }) {
-                if list[index].name != device.name || list[index].transport != device.transport
-                    || Date().timeIntervalSince(list[index].lastSeen) > 3600 {
-                    list[index].name = device.name
-                    list[index].transport = device.transport
-                    list[index].lastSeen = Date()
-                    changed = true
-                }
-            } else if let index = list.firstIndex(where: {
-                // To samo urządzenie USB w innym porcie dostaje nowy UID — dopasuj po modelu i nazwie.
-                !connectedUIDs.contains($0.uid) && $0.modelUID != nil
-                    && $0.modelUID == device.modelUID && $0.name == device.name
-            }) {
-                list[index].uid = device.uid
-                list[index].lastSeen = Date()
-                changed = true
-            } else {
-                list.append(KnownDevice(
-                    uid: device.uid,
-                    name: device.name,
-                    modelUID: device.modelUID,
-                    transport: device.transport,
-                    isEnabled: Self.enabledByDefault(device),
-                    lastSeen: Date()
-                ))
-                changed = true
-                if settings.didRunOnboarding {
-                    log(direction, "Nowe urządzenie: \(device.name)")
-                }
-            }
+        let result = PriorityPolicy.merge(known: settings.priority(direction), connected: devices, now: Date())
+        guard result.changed else { return }
+        settings.setPriority(result.list, for: direction)
+        if settings.didRunOnboarding {
+            result.added.forEach { log(direction, "Nowe urządzenie: \($0.name)") }
         }
-        if changed { settings.setPriority(list, for: direction) }
     }
 
-    /// Mikrofony Bluetooth (np. AirPods) i iPhone'a to typowi „porywacze” wejścia — domyślnie wyłączone.
-    private static func enabledByDefault(_ device: AudioDevice) -> Bool {
-        guard device.direction == .input else { return true }
-        return !(device.transport.isBluetooth || device.transport.isContinuity)
-    }
-
-    /// Przy pierwszym uruchomieniu: obecne urządzenie domyślne na górę listy.
     private func seedInitialPriorities() {
         for direction in Direction.allCases {
-            // Włączone przed wyłączonymi; wbudowane na końcu włączonych.
-            var list = settings.priority(direction).enumerated().sorted { a, b in
-                func weight(_ d: KnownDevice) -> Int {
-                    if !d.isEnabled { return 2 }
-                    return d.transport == kAudioDeviceTransportTypeBuiltIn ? 1 : 0
-                }
-                return (weight(a.element), a.offset) < (weight(b.element), b.offset)
-            }.map(\.element)
-            // Obecne domyślne na górę — chyba że to „porywacz” (np. mikrofon AirPods, który system właśnie wybrał sam).
-            if let current = currentDefault[direction],
-               let device = devices(direction).first(where: { $0.objectID == current }),
-               Self.enabledByDefault(device),
-               let index = list.firstIndex(where: { $0.uid == device.uid }) {
-                list.insert(list.remove(at: index), at: 0)
-            }
+            let list = PriorityPolicy.seed(settings.priority(direction), currentDefault: defaultDevice(direction))
             settings.setPriority(list, for: direction)
         }
         settings.didRunOnboarding = true
-    }
-
-    func reconcile() {
-        refreshDevices()
-        guard settings.isActive else { return }
-        for direction in Direction.allCases where settings.enforces(direction) {
-            enforce(direction)
-        }
     }
 
     private func enforce(_ direction: Direction) {
         guard let target = preferredDevice(direction) else { return }
 
         if direction == .output, settings.alertSoundsFollowOutput,
-           AudioHAL.systemOutputDeviceID() != target.objectID,
-           AudioHAL.canBeSystemOutput(target.objectID) {
-            AudioHAL.setDefault(target.objectID, selector: kAudioHardwarePropertyDefaultSystemOutputDevice)
+           system.systemOutputDeviceID() != target.objectID,
+           system.canBeSystemOutput(target.objectID) {
+            _ = system.setSystemOutputDevice(target.objectID)
         }
 
         guard currentDefault[direction] != target.objectID else { return }
 
-        if let until = backoffUntil[direction], until > Date() { return }
-
-        // Ograniczenie: maks. 6 korekt w ciągu 20 s, potem 30 s przerwy (nie walczymy z systemem w kółko).
-        let now = Date()
-        var recent = (corrections[direction] ?? []).filter { now.timeIntervalSince($0) < 20 }
-        guard recent.count < 6 else {
-            backoffUntil[direction] = now.addingTimeInterval(30)
+        let now = clock.now
+        switch limiter.check(direction, now: now) {
+        case .inBackoff:
+            return
+        case .startedBackoff:
             log(direction, "System ciągle przełącza urządzenie — wstrzymuję korekty na 30 s")
             return
+        case .allowed:
+            break
         }
 
         let previous = defaultDevice(direction)?.name ?? "inne urządzenie"
-        guard AudioHAL.setDefault(target.objectID, for: direction) else {
+        guard system.setDefaultDevice(target.objectID, for: direction) else {
             log(direction, "Nie udało się ustawić: \(target.name)")
             return
         }
-        recent.append(now)
-        corrections[direction] = recent
+        limiter.record(direction, now: now)
         currentDefault[direction] = target.objectID
         correctionCount += 1
 
@@ -303,29 +281,11 @@ final class AudioManager {
         scheduleVerification(direction)
     }
 
-    /// System potrafi przełączyć urządzenie ponownie po negocjacji Bluetooth — sprawdzamy jeszcze dwa razy.
-    private func scheduleVerification(_ direction: Direction) {
-        verifyTasks[direction]?.cancel()
-        verifyTasks[direction] = Task { [weak self] in
-            for delay in [Duration.seconds(1), .seconds(3)] {
-                try? await Task.sleep(for: delay)
-                guard !Task.isCancelled, let self else { return }
-                self.refreshDefaults()
-                if self.settings.isActive, self.settings.enforces(direction) {
-                    self.enforce(direction)
-                }
-            }
-        }
-    }
-
-    private(set) var isFlashing = false
-    @ObservationIgnored private var flashTask: Task<Void, Never>?
-
     private func flash() {
         isFlashing = true
         flashTask?.cancel()
         flashTask = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(2.5))
+            try? await Task.sleep(for: Timing.flashDuration)
             guard !Task.isCancelled else { return }
             self?.isFlashing = false
         }
@@ -333,6 +293,8 @@ final class AudioManager {
 
     private func log(_ direction: Direction, _ message: String) {
         activity.insert(ActivityEntry(date: Date(), direction: direction, message: message), at: 0)
-        if activity.count > 50 { activity.removeLast(activity.count - 50) }
+        if activity.count > Self.maxActivityEntries {
+            activity.removeLast(activity.count - Self.maxActivityEntries)
+        }
     }
 }
