@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="t">
+  <title id="t">AudioPin concept A — Needle Wave</title>
+  <!-- waveform bars (pills, width 28, centred on y=150) + centre bar replaced by a pushpin -->
+  <rect x="26" y="126" width="28" height="48" rx="14"/>
+  <rect x="70" y="106" width="28" height="88" rx="14"/>
+  <rect x="158" y="106" width="28" height="88" rx="14"/>
+  <rect x="202" y="126" width="28" height="48" rx="14"/>
+  <!-- pin: head r34 at (128,60); needle tapers 20 -> 4 down to y 236 -->
+  <path d="M128 26 A34 34 0 1 1 127.99 26 Z M118 90 H138 L130 234 Q128 238 126 234 Z"/>
+</svg>

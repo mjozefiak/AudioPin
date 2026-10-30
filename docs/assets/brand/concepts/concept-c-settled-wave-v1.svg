@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="t">
+  <title id="t">AudioPin concept C — Settled Wave</title>
+  <!-- decaying wave (stroke 22, exploration) settles into a flat line at the pin (r30 dot) -->
+  <path fill="none" stroke="#000" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"
+        d="M28 128 C45 43 65 43 76 128 C86 184 102 184 112 128 C118 104 128 104 134 128 H228"/>
+  <circle cx="164" cy="128" r="32"/>
+</svg>

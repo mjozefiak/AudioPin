@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title">
+  <title id="title">AudioPin</title>
+  <path fill="#5B43E8" d="M16 140A16 16 0 0 1 48 140V164A16 16 0 0 1 16 164ZM64 116A16 16 0 0 1 96 116V188A16 16 0 0 1 64 188ZM160 116A16 16 0 0 1 192 116V188A16 16 0 0 1 160 188ZM208 140A16 16 0 0 1 240 140V164A16 16 0 0 1 208 164ZM128 24A40 40 0 1 1 128 104A40 40 0 1 1 128 24ZM112 96H144L133 232Q128 242 123 232Z"/>
+</svg>

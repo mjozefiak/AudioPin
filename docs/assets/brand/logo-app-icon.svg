@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title">
+  <title id="title">AudioPin app icon</title>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="256" y2="256" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#7D6BFF"/><stop offset="1" stop-color="#4B2FD6"/></linearGradient></defs>
+  <rect width="256" height="256" rx="57" fill="url(#bg)"/>
+  <path fill="#FFFFFF" transform="translate(46 42) scale(.64)" d="M17 140A15 15 0 0 1 47 140V164A15 15 0 0 1 17 164ZM65 116A15 15 0 0 1 95 116V188A15 15 0 0 1 65 188ZM161 116A15 15 0 0 1 191 116V188A15 15 0 0 1 161 188ZM209 140A15 15 0 0 1 239 140V164A15 15 0 0 1 209 164ZM128 25A39 39 0 1 1 128 103A39 39 0 1 1 128 25ZM113 96H143L132.5 232Q128 241 123.5 232Z"/>
+</svg>

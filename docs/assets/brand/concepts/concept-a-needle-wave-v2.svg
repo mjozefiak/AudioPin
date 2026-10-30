@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="t">
+  <title id="t">AudioPin concept A — Needle Wave v2</title>
+  <!-- unit 8. bars 32 wide, gap 16; heights 56/104 centred on y=152. Pin: head r40 at (128,64), needle 32 → 8 tip at y=240 -->
+  <rect x="8" y="124" width="32" height="56" rx="16"/>
+  <rect x="56" y="100" width="32" height="104" rx="16"/>
+  <rect x="168" y="100" width="32" height="104" rx="16"/>
+  <rect x="216" y="124" width="32" height="56" rx="16"/>
+  <path d="M128 24 A40 40 0 1 1 127.99 24 Z M112 96 H144 L133 234 Q128 244 123 234 Z"/>
+</svg>

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="t">
+  <title id="t">AudioPin concept B — Speaker P</title>
+  <!-- P: stem 40 wide whose foot tapers to a needle point; bowl = speaker ring (r72/r34) with a dust-cap dot (r14) -->
+  <path fill-rule="evenodd" d="
+    M60 52 A20 20 0 0 1 80 32 H148 A72 72 0 0 1 148 176 H100 V188 L80 236 L60 188 Z
+    M148 70 A34 34 0 1 0 148.01 70 Z
+    M148 90 A14 14 0 1 1 147.99 90 Z"/>
+</svg>
