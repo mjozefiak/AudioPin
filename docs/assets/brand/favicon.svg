@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-labelledby="title">
+  <title id="title">AudioPin</title>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#7D6BFF"/><stop offset="1" stop-color="#4B2FD6"/></linearGradient></defs>
+  <rect width="32" height="32" rx="7.5" fill="url(#bg)"/>
+  <path fill="#FFFFFF" d="M5.15 15A1.85 1.85 0 0 1 8.85 15V21A1.85 1.85 0 0 1 5.15 21ZM23.15 15A1.85 1.85 0 0 1 26.85 15V21A1.85 1.85 0 0 1 23.15 21ZM16 5.15A4.85 4.85 0 1 1 16 14.85A4.85 4.85 0 1 1 16 5.15ZM14.15 13H17.85L16.93 26.5Q16 28.5 15.07 26.5Z"/>
+</svg>

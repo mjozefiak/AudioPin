@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="t">
+  <title id="t">AudioPin concept C — Settled Wave v2 (fader)</title>
+  <!-- restless wave (stroke 24) settles into a flat track; the fader knob is the pin that holds it -->
+  <path fill="none" stroke="#000" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"
+        d="M28 128 C42 52 64 52 76 128 C86 180 104 180 114 128 C119 108 126 108 132 128 H228"/>
+  <rect x="148" y="72" width="40" height="112" rx="20"/>
+</svg>
