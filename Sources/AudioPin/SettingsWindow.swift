@@ -26,9 +26,7 @@ struct SettingsWindow: View {
         }
     }
 
-    @State private var pane: Pane = CommandLine.arguments
-        .first { $0.hasPrefix("--pane=") }
-        .flatMap { Pane(rawValue: String($0.dropFirst(7))) } ?? .output
+    @State private var pane: Pane = PreviewMode.initialPane.flatMap(Pane.init(rawValue:)) ?? .output
 
     var body: some View {
         NavigationSplitView {
@@ -58,6 +56,7 @@ struct SettingsWindow: View {
 private struct GeneralPane: View {
     @Environment(AudioManager.self) private var manager
     @Environment(LoginItem.self) private var loginItem
+    @State private var notificationsDenied = false
 
     var body: some View {
         @Bindable var manager = manager
@@ -78,7 +77,7 @@ private struct GeneralPane: View {
             Section("Uruchamianie") {
                 Toggle("Uruchamiaj po zalogowaniu", isOn: Binding(
                     get: { loginItem.isEnabled || loginItem.needsApproval },
-                    set: { loginItem.setWanted($0) }
+                    set: { loginItem.setEnabled($0) }
                 ))
                 if loginItem.needsApproval {
                     HStack {
@@ -97,8 +96,18 @@ private struct GeneralPane: View {
                 Toggle("Dźwięki systemowe idą za wybranym wyjściem", isOn: $manager.settings.alertSoundsFollowOutput)
                 Toggle("Powiadomienie przy każdej korekcie", isOn: $manager.settings.notifyOnCorrection)
                     .onChange(of: manager.settings.notifyOnCorrection) { _, on in
-                        if on { Notifier.shared.requestAuthorization() }
+                        guard on else { return }
+                        Task {
+                            if await !Notifier.shared.requestAuthorization() {
+                                manager.settings.notifyOnCorrection = false
+                                notificationsDenied = true
+                            }
+                        }
                     }
+                if notificationsDenied {
+                    Text("Powiadomienia są zablokowane. Zezwól na nie w Ustawieniach systemowych → Powiadomienia.")
+                        .font(.caption).foregroundStyle(.orange)
+                }
                 Toggle("Pokazuj nazwę mikrofonu w pasku menu", isOn: $manager.settings.showNameInMenuBar)
             }
 
@@ -159,7 +168,7 @@ private struct PriorityPane: View {
             if !inactive.isEmpty {
                 Section {
                     Button("Zapomnij wszystkie odłączone (\(inactive.count))", role: .destructive) {
-                        inactive.forEach { manager.forget($0.uid, direction) }
+                        manager.forget(Set(inactive.map(\.uid)), direction)
                     }
                 }
             }
@@ -221,9 +230,11 @@ private struct PriorityRow: View {
                 Button("Przesuń wyżej") { manager.move(device.uid, direction, by: -1) }
                 Button("Przesuń niżej") { manager.move(device.uid, direction, by: 1) }
                 Divider()
-                Button("Zapomnij urządzenie", role: .destructive) { manager.forget(device.uid, direction) }
+                Button("Zapomnij urządzenie", role: .destructive) { manager.forget([device.uid], direction) }
+                    .disabled(connected)
             } label: {
                 Image(systemName: "ellipsis.circle")
+                    .accessibilityLabel("Więcej opcji")
             }
             .menuStyle(.borderlessButton)
             .menuIndicator(.hidden)

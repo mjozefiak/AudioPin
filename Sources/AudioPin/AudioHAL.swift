@@ -2,7 +2,7 @@ import AudioToolbox
 import CoreAudio
 import Foundation
 
-/// Kierunek audio: wejście (mikrofony) lub wyjście (głośniki, słuchawki).
+/// Audio direction: input (microphones) or output (speakers, headphones).
 enum Direction: String, Codable, CaseIterable, Identifiable, Sendable {
     case input, output
 
@@ -21,7 +21,7 @@ enum Direction: String, Codable, CaseIterable, Identifiable, Sendable {
     var symbol: String { self == .input ? "mic.fill" : "speaker.wave.2.fill" }
 }
 
-/// Migawka jednego urządzenia audio w danym kierunku.
+/// Snapshot of one audio device in one direction.
 struct AudioDevice: Identifiable, Hashable, Sendable {
     let objectID: AudioObjectID
     let uid: String
@@ -33,7 +33,7 @@ struct AudioDevice: Identifiable, Hashable, Sendable {
     var id: String { uid }
 }
 
-/// Cienka warstwa nad CoreAudio HAL (C API). Wszystkie wywołania są synchroniczne i szybkie.
+/// Thin wrapper over the Core Audio HAL C API. All calls are synchronous and fast.
 enum AudioHAL {
     static let system = AudioObjectID(kAudioObjectSystemObject)
 
@@ -71,7 +71,8 @@ enum AudioHAL {
         guard AudioObjectGetPropertyDataSize(system, &addr, 0, nil, &size) == noErr, size > 0 else { return [] }
         var ids = [AudioObjectID](repeating: 0, count: Int(size) / MemoryLayout<AudioObjectID>.size)
         guard AudioObjectGetPropertyData(system, &addr, 0, nil, &size, &ids) == noErr else { return [] }
-        return ids
+        // A device may disappear between the two calls; keep only what was actually returned.
+        return Array(ids.prefix(Int(size) / MemoryLayout<AudioObjectID>.size))
     }
 
     static func streamCount(_ id: AudioObjectID, _ direction: Direction) -> Int {
@@ -81,7 +82,7 @@ enum AudioHAL {
         return Int(size) / MemoryLayout<AudioStreamID>.size
     }
 
-    /// Urządzenia, które system pozwala ustawić jako domyślne w danym kierunku.
+    /// Devices the system allows as the default in the given direction.
     static func devices(_ direction: Direction) -> [AudioDevice] {
         allDeviceIDs().compactMap { id in
             guard streamCount(id, direction) > 0,
@@ -93,12 +94,28 @@ enum AudioHAL {
             return AudioDevice(
                 objectID: id,
                 uid: uid,
-                name: string(id, kAudioObjectPropertyName) ?? "Nieznane urządzenie",
+                name: sanitizedName(string(id, kAudioObjectPropertyName)),
                 modelUID: string(id, kAudioDevicePropertyModelUID),
                 transport: uint32(id, kAudioDevicePropertyTransportType) ?? 0,
                 direction: direction
             )
         }
+    }
+
+    static let maxNameLength = 80
+
+    /// Device names come from the device itself (Bluetooth names are chosen by the peer).
+    /// Strip control and bidirectional-override characters so a name can't spoof other UI text.
+    static func sanitizedName(_ raw: String?) -> String {
+        let scalars = (raw ?? "").unicodeScalars.filter { scalar in
+            !CharacterSet.controlCharacters.contains(scalar)
+                && !(0x202A...0x202E).contains(scalar.value)
+                && !(0x2066...0x2069).contains(scalar.value)
+                && scalar.value != 0x200E && scalar.value != 0x200F
+        }
+        let name = String(String.UnicodeScalarView(scalars)).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty else { return "Nieznane urządzenie" }
+        return name.count > maxNameLength ? String(name.prefix(maxNameLength)) + "…" : name
     }
 
     static func defaultDeviceID(_ direction: Direction) -> AudioObjectID? {
@@ -125,7 +142,7 @@ enum AudioHAL {
         uint32(id, kAudioDevicePropertyDeviceCanBeDefaultSystemDevice, kAudioObjectPropertyScopeOutput) == 1
     }
 
-    // MARK: Głośność
+    // MARK: Volume
 
     static func volume(_ id: AudioObjectID, _ direction: Direction) -> Float? {
         var addr = address(kAudioHardwareServiceDeviceProperty_VirtualMainVolume, direction.scope)
@@ -146,9 +163,9 @@ enum AudioHAL {
     }
 }
 
-/// Nasłuchuje zmian listy urządzeń i urządzeń domyślnych.
-/// Stan zmienia się tylko w start/stop wywoływanych z głównego aktora.
-final class HALListener: @unchecked Sendable {
+/// Listens for changes of the device list and the default devices.
+/// Owned by `CoreAudioSystem` on the main actor; it is intentionally not `Sendable`.
+final class HALListener {
     private let queue = DispatchQueue(label: "AudioPin.hal-listener")
     private var registrations: [(AudioObjectPropertyAddress, AudioObjectPropertyListenerBlock)] = []
 
@@ -162,7 +179,9 @@ final class HALListener: @unchecked Sendable {
         ]
         for selector in selectors {
             var addr = AudioHAL.address(selector)
-            let block: AudioObjectPropertyListenerBlock = { count, addresses in
+            // Explicitly @Sendable: the HAL calls this on `queue`, never on the main actor.
+            // It must not capture `self` or any main-actor state.
+            let block: AudioObjectPropertyListenerBlock = { @Sendable count, addresses in
                 for i in 0..<Int(count) { onChange(addresses[i].mSelector) }
             }
             if AudioObjectAddPropertyListenerBlock(AudioHAL.system, &addr, queue, block) == noErr {

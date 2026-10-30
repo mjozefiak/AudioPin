@@ -1,6 +1,7 @@
 import CoreAudio
 import Foundation
 import Observation
+import os
 
 /// One entry in the in-app activity log.
 struct ActivityEntry: Identifiable, Sendable {
@@ -29,7 +30,11 @@ final class AudioManager {
         /// Extra checks after each correction (Bluetooth may switch again after renegotiating).
         static let verificationDelays: [Duration] = [.seconds(1), .seconds(3)]
         static let flashDuration: Duration = .seconds(2.5)
+        /// Small margin so the re-check after a back-off lands just after it ends.
+        static let backoffMargin: Duration = .milliseconds(100)
     }
+
+    private static let logger = Logger(subsystem: "dev.mjozefiak.AudioPin", category: "enforcement")
 
     static let maxActivityEntries = 50
 
@@ -38,6 +43,9 @@ final class AudioManager {
     private(set) var activity: [ActivityEntry] = []
     private(set) var correctionCount = 0
     private(set) var isFlashing = false
+    /// True while this login session is not the active one (fast user switching).
+    /// Default devices are shared system-wide, so a background session must not fight the active user.
+    private(set) var isSuspended = false
 
     var settings: AppSettings {
         didSet {
@@ -53,6 +61,9 @@ final class AudioManager {
     @ObservationIgnored private let store: any SettingsStore
     @ObservationIgnored private let clock = ContinuousClock()
     @ObservationIgnored private var limiter = CorrectionLimiter()
+    /// Separate budget for the alert-sound device, so it can never ping-pong with the system either.
+    @ObservationIgnored private var alertLimiter = CorrectionLimiter()
+    @ObservationIgnored private var backoffTasks: [Direction: Task<Void, Never>] = [:]
     @ObservationIgnored private var pendingReconcile: Task<Void, Never>?
     @ObservationIgnored private var watchTask: Task<Void, Never>?
     @ObservationIgnored private var verifyTasks: [Direction: Task<Void, Never>] = [:]
@@ -77,11 +88,23 @@ final class AudioManager {
         system.stopListening()
         [pendingReconcile, watchTask, flashTask].forEach { $0?.cancel() }
         verifyTasks.values.forEach { $0.cancel() }
+        backoffTasks.values.forEach { $0.cancel() }
+    }
+
+    /// Fast user switching: pause while another user's session is in front.
+    func setSuspended(_ suspended: Bool) {
+        isSuspended = suspended
+        if !suspended {
+            limiter.reset()
+            alertLimiter.reset()
+            scheduleReconcile(delay: Timing.wakeDelay)
+        }
     }
 
     /// After sleep the hardware may have changed; clear the back-off and check again.
     func systemDidWake() {
         limiter.reset()
+        alertLimiter.reset()
         scheduleReconcile(delay: Timing.wakeDelay)
     }
 
@@ -144,9 +167,13 @@ final class AudioManager {
         settings.setPriority(list, for: direction)
     }
 
-    func forget(_ uid: String, _ direction: Direction) {
+    /// Removes disconnected devices from the list. Connected devices cannot be forgotten:
+    /// they would be re-added immediately with default settings.
+    func forget(_ uids: Set<String>, _ direction: Direction) {
+        let removable = uids.filter { !isConnected($0, direction) }
+        guard !removable.isEmpty else { return }
         var list = settings.priority(direction)
-        list.removeAll { $0.uid == uid }
+        list.removeAll { removable.contains($0.uid) }
         settings.setPriority(list, for: direction)
     }
 
@@ -156,7 +183,7 @@ final class AudioManager {
 
     func reconcile() {
         refreshDevices()
-        guard settings.isActive else { return }
+        guard settings.isActive, !isSuspended else { return }
         for direction in Direction.allCases where settings.enforces(direction) {
             enforce(direction)
         }
@@ -203,8 +230,9 @@ final class AudioManager {
                 try? await Task.sleep(for: delay - elapsed)
                 elapsed = delay
                 guard !Task.isCancelled, let self else { return }
-                self.refreshDefaults()
-                if self.settings.isActive, self.settings.enforces(direction) {
+                // Refresh the device list too: the target may have disappeared meanwhile.
+                self.refreshDevices()
+                if self.settings.isActive, !self.isSuspended, self.settings.enforces(direction) {
                     self.enforce(direction)
                 }
             }
@@ -220,7 +248,13 @@ final class AudioManager {
     private func refreshDevices() {
         for direction in Direction.allCases {
             let list = system.devices(direction)
+            let gone = Set(devices(direction).map(\.uid)).subtracting(list.map(\.uid))
             connected[direction] = list
+            if !gone.isEmpty {
+                settings.setPriority(
+                    PriorityPolicy.markDisconnected(gone, in: settings.priority(direction), now: Date()),
+                    for: direction)
+            }
             register(list, direction)
         }
         refreshDefaults()
@@ -246,10 +280,8 @@ final class AudioManager {
     private func enforce(_ direction: Direction) {
         guard let target = preferredDevice(direction) else { return }
 
-        if direction == .output, settings.alertSoundsFollowOutput,
-           system.systemOutputDeviceID() != target.objectID,
-           system.canBeSystemOutput(target.objectID) {
-            _ = system.setSystemOutputDevice(target.objectID)
+        if direction == .output, settings.alertSoundsFollowOutput {
+            syncAlertSoundDevice(to: target)
         }
 
         guard currentDefault[direction] != target.objectID else { return }
@@ -260,17 +292,21 @@ final class AudioManager {
             return
         case .startedBackoff:
             log(direction, "System ciągle przełącza urządzenie — wstrzymuję korekty na 30 s")
+            scheduleAfterBackoff(direction)
             return
         case .allowed:
             break
         }
 
         let previous = defaultDevice(direction)?.name ?? "inne urządzenie"
+        // Failed attempts count against the limit too, so a device that refuses can't cause a loop.
+        limiter.record(direction, now: now)
         guard system.setDefaultDevice(target.objectID, for: direction) else {
+            Self.logger.error("Failed to set default \(direction.rawValue, privacy: .public) device")
             log(direction, "Nie udało się ustawić: \(target.name)")
             return
         }
-        limiter.record(direction, now: now)
+        Self.logger.info("Corrected default \(direction.rawValue, privacy: .public) device")
         currentDefault[direction] = target.objectID
         correctionCount += 1
 
@@ -279,6 +315,27 @@ final class AudioManager {
         onCorrection?(direction, message)
         flash()
         scheduleVerification(direction)
+    }
+
+    private func syncAlertSoundDevice(to target: AudioDevice) {
+        guard system.systemOutputDeviceID() != target.objectID, system.canBeSystemOutput(target.objectID) else { return }
+        let now = clock.now
+        guard alertLimiter.check(.output, now: now) == .allowed else { return }
+        alertLimiter.record(.output, now: now)
+        if !system.setSystemOutputDevice(target.objectID) {
+            Self.logger.error("Failed to set the alert sound device")
+        }
+    }
+
+    /// When a back-off ends nothing else may trigger a check, so schedule one explicitly.
+    private func scheduleAfterBackoff(_ direction: Direction) {
+        backoffTasks[direction]?.cancel()
+        let delay = limiter.backoff + Timing.backoffMargin
+        backoffTasks[direction] = Task { [weak self] in
+            try? await Task.sleep(for: delay)
+            guard !Task.isCancelled else { return }
+            self?.reconcile()
+        }
     }
 
     private func flash() {

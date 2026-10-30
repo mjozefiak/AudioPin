@@ -5,10 +5,10 @@ import SwiftUI
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let manager = AudioManager()
     let loginItem = LoginItem()
-    private var wakeObserver: (any NSObjectProtocol)?
+    private var observers: [any NSObjectProtocol] = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // Tylko jedna instancja naraz.
+        // Only one instance at a time.
         if let id = Bundle.main.bundleIdentifier,
            NSRunningApplication.runningApplications(withBundleIdentifier: id)
             .contains(where: { $0.processIdentifier != ProcessInfo.processInfo.processIdentifier }) {
@@ -18,39 +18,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.accessory)
         Notifier.shared.setUp()
         manager.onCorrection = { [weak self] direction, message in
-            guard let self else { return }
-            if self.manager.settings.notifyOnCorrection { Notifier.shared.post(direction, message) }
+            guard let self, self.manager.settings.notifyOnCorrection else { return }
+            Notifier.shared.post(direction, message)
         }
         manager.start()
-        wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
-            forName: NSWorkspace.didWakeNotification, object: nil, queue: .main
-        ) { [weak self] _ in
-            Task { @MainActor in self?.manager.systemDidWake() }
-        }
-        if AudioPinApp.previewMode {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { Self.snapshotWindows() }
-        }
-        if Bundle.main.bundlePath.hasSuffix(".app") {
-            loginItem.ensureRegisteredIfWanted()
-        }
+        observeWorkspace()
+        loginItem.refresh()
+        #if DEBUG
+        if PreviewMode.isEnabled { PreviewMode.scheduleSnapshot() }
+        #endif
     }
 
-    /// Tryb podglądu: zapisuje widoczne okna do PNG (folder z AUDIOPIN_SNAPSHOT_DIR).
-    private static func snapshotWindows() {
-        guard let dir = ProcessInfo.processInfo.environment["AUDIOPIN_SNAPSHOT_DIR"] else { return }
-        for (index, window) in NSApp.windows.enumerated() where window.isVisible {
-            guard let view = window.contentView?.superview ?? window.contentView,
-                  let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { continue }
-            view.cacheDisplay(in: view.bounds, to: rep)
-            let name = window.title.isEmpty ? "window\(index)" : window.title
-            try? rep.representation(using: .png, properties: [:])?
-                .write(to: URL(fileURLWithPath: dir).appendingPathComponent("\(name).png"))
+    private func observeWorkspace() {
+        let center = NSWorkspace.shared.notificationCenter
+        let events: [(Notification.Name, @MainActor (AudioManager) -> Void)] = [
+            (NSWorkspace.didWakeNotification, { $0.systemDidWake() }),
+            (NSWorkspace.sessionDidResignActiveNotification, { $0.setSuspended(true) }),
+            (NSWorkspace.sessionDidBecomeActiveNotification, { $0.setSuspended(false) }),
+        ]
+        observers = events.map { name, action in
+            center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                Task { @MainActor in
+                    guard let self else { return }
+                    action(self.manager)
+                }
+            }
         }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
         manager.stop()
-        if let wakeObserver { NSWorkspace.shared.notificationCenter.removeObserver(wakeObserver) }
+        observers.forEach { NSWorkspace.shared.notificationCenter.removeObserver($0) }
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
@@ -77,24 +75,23 @@ struct AudioPinApp: App {
                 .environment(delegate.loginItem)
         }
         .windowResizability(.contentSize)
-        .defaultLaunchBehavior(Self.previewMode ? .presented : .suppressed)
+        .defaultLaunchBehavior(PreviewMode.isEnabled ? .presented : .suppressed)
         .restorationBehavior(.disabled)
 
-        // Tryb podglądu (tylko do testów): `AudioPin --preview` pokazuje zawartość okienka z paska menu w oknie.
+        #if DEBUG
         Window("Podgląd menu", id: "menu-preview") {
             MenuBarView()
                 .environment(delegate.manager)
                 .environment(delegate.loginItem)
         }
         .windowResizability(.contentSize)
-        .defaultLaunchBehavior(Self.previewMode ? .presented : .suppressed)
+        .defaultLaunchBehavior(PreviewMode.isEnabled ? .presented : .suppressed)
         .restorationBehavior(.disabled)
+        #endif
     }
-
-    static let previewMode = CommandLine.arguments.contains("--preview")
 }
 
-/// Ikona w pasku menu; przez chwilę po korekcie pokazuje znacznik.
+/// Shows a check mark in the menu bar for a moment after each correction.
 struct MenuBarLabel: View {
     @Environment(AudioManager.self) private var manager
 
@@ -105,6 +102,7 @@ struct MenuBarLabel: View {
             Label(name, systemImage: symbol).labelStyle(.titleAndIcon)
         } else {
             Image(systemName: symbol)
+                .accessibilityLabel("AudioPin")
         }
     }
 }
