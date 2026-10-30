@@ -8,6 +8,8 @@ AudioPin is a tiny, native menu bar app that stops macOS from hijacking your aud
 ![Swift](https://img.shields.io/badge/Swift-6.4-orange)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
+**[Website](https://mjozefiak.github.io/AudioPin/)** · **[Download AudioPin.dmg](https://github.com/mjozefiak/AudioPin/releases/latest/download/AudioPin.dmg)**
+
 ## Why
 
 macOS follows a simple rule: *the last connected device wins*. That is rarely what you want. A typical case:
@@ -45,7 +47,30 @@ AudioPin fixes this once and for all: you choose the order of your devices, and 
 
 ## Installation
 
-AudioPin is distributed as source code. Building takes about a minute.
+### Download (recommended)
+
+1. Download **[AudioPin.dmg](https://github.com/mjozefiak/AudioPin/releases/latest/download/AudioPin.dmg)** from the [latest release](https://github.com/mjozefiak/AudioPin/releases/latest).
+2. Open it and drag **AudioPin** onto the **Applications** folder.
+3. Open AudioPin from Applications.
+
+A pin icon appears in the menu bar. The first time you open it, AudioPin asks whether it should launch at login. You can change this any time in Settings.
+
+#### First launch: Gatekeeper
+
+AudioPin is ad-hoc signed but **not notarized** by Apple (that requires a paid developer account). So the first time you open it, macOS blocks it. To allow it once:
+
+1. Open AudioPin and close the warning.
+2. Open **System Settings → Privacy & Security**, scroll down and click **Open Anyway** next to the AudioPin message, then confirm.
+
+On current macOS, right-clicking the app and choosing **Open** no longer skips this check. Alternatively, remove the quarantine flag in Terminal:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/AudioPin.app
+```
+
+### Build from source
+
+Building takes about a minute.
 
 ```bash
 git clone https://github.com/mjozefiak/AudioPin.git
@@ -59,16 +84,14 @@ The script does three things:
 2. Assembles and ad-hoc signs `AudioPin.app`.
 3. Copies it to `~/Applications` and launches it.
 
-A pin icon appears in the menu bar. The first time you open it, AudioPin asks whether it should launch at login. You can change this any time in Settings.
+To only build the app bundle without installing it, run `./scripts/build-app.sh`. The app is written to `dist/AudioPin.app`. To build the drag-and-drop installer, run `./scripts/make-dmg.sh`, which writes `dist/AudioPin.dmg`.
 
-To only build the app bundle without installing it, run `./scripts/build-app.sh`. The app is written to `dist/AudioPin.app`.
-
-> **Note:** the app is ad-hoc signed, not notarized. Because you build it yourself on your own Mac, Gatekeeper does not block it. If you copy the built app to another Mac, right-click it and choose **Open** the first time.
+> **Note:** an app you build yourself is not quarantined, so Gatekeeper does not block it on your own Mac. If you copy it to another Mac, allow it once as described in [First launch: Gatekeeper](#first-launch-gatekeeper).
 
 ### Uninstall
 
 1. Quit AudioPin from its menu.
-2. Delete `~/Applications/AudioPin.app`.
+2. Delete `AudioPin.app` from `/Applications` (or `~/Applications` if you built it from source).
 3. Optionally, remove its settings:
 
 ```bash
