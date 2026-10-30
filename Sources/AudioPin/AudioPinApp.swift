@@ -5,6 +5,7 @@ import SwiftUI
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let manager = AudioManager()
     let loginItem = LoginItem()
+    private var wakeObserver: (any NSObjectProtocol)?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Tylko jedna instancja naraz.
@@ -21,6 +22,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             if self.manager.settings.notifyOnCorrection { Notifier.shared.post(direction, message) }
         }
         manager.start()
+        wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didWakeNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in self?.manager.systemDidWake() }
+        }
         if AudioPinApp.previewMode {
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { Self.snapshotWindows() }
         }
@@ -40,6 +46,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             try? rep.representation(using: .png, properties: [:])?
                 .write(to: URL(fileURLWithPath: dir).appendingPathComponent("\(name).png"))
         }
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        manager.stop()
+        if let wakeObserver { NSWorkspace.shared.notificationCenter.removeObserver(wakeObserver) }
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }

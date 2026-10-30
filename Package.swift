@@ -5,7 +5,8 @@ let package = Package(
     name: "AudioPin",
     platforms: [.macOS(.v27)],
     targets: [
-        .executableTarget(name: "AudioPin")
+        .executableTarget(name: "AudioPin"),
+        .testTarget(name: "AudioPinTests", dependencies: ["AudioPin"]),
     ],
     swiftLanguageModes: [.v6]
 )

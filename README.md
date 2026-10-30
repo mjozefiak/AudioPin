@@ -106,12 +106,17 @@ USB devices get a new UID when plugged into a different port. AudioPin matches t
 Sources/AudioPin/
 ├── AudioPinApp.swift      # App entry point, scenes, app delegate
 ├── AudioHAL.swift         # Thin Core Audio wrapper + property listener
-├── AudioManager.swift     # Priority logic, enforcement, re-checks, back-off
-├── Preferences.swift      # Persisted settings (Codable, UserDefaults)
+├── AudioSystem.swift      # Protocol over the hardware + Core Audio implementation
+├── AudioManager.swift     # Orchestrates enforcement: re-checks, verification, UI state
+├── PriorityPolicy.swift   # Pure selection rules (preferred device, merge, seeding)
+├── CorrectionLimiter.swift# Rate limit and back-off per direction
+├── SettingsStore.swift    # Settings persistence (UserDefaults)
+├── Preferences.swift      # Settings model (Codable)
 ├── DeviceStyle.swift      # SF Symbols and labels for device types
 ├── MenuBarView.swift      # Menu bar popover (SwiftUI)
 ├── SettingsWindow.swift   # Settings window (SwiftUI)
 └── SystemServices.swift   # Launch at login, notifications, window activation
+Tests/AudioPinTests/       # Swift Testing: policy, limiter, manager with a fake AudioSystem
 scripts/
 ├── build-app.sh           # Builds and signs dist/AudioPin.app
 ├── install.sh             # Builds, installs to ~/Applications, launches
@@ -122,6 +127,7 @@ Development commands:
 
 ```bash
 swift build                 # debug build
+swift test                  # unit tests (no real audio devices are touched)
 ./scripts/build-app.sh      # release app bundle
 ```
 
