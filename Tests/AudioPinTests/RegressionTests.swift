@@ -64,7 +64,7 @@ struct RegressionTests {
     @Test func deviceNamesAreSanitized() {
         #expect(AudioHAL.sanitizedName("Evil\u{202E}enoD") == "EvilenoD")
         #expect(AudioHAL.sanitizedName("  Mic\n ") == "Mic")
-        #expect(AudioHAL.sanitizedName(nil) == "Nieznane urządzenie")
+        #expect(AudioHAL.sanitizedName(nil) == "Unknown Device")
         let long = String(repeating: "x", count: 200)
         #expect(AudioHAL.sanitizedName(long).count == AudioHAL.maxNameLength + 1)
     }

@@ -16,8 +16,10 @@ enum Direction: String, Codable, CaseIterable, Identifiable, Sendable {
         self == .input ? kAudioHardwarePropertyDefaultInputDevice : kAudioHardwarePropertyDefaultOutputDevice
     }
 
-    var title: String { self == .input ? "Wejście" : "Wyjście" }
-    var longTitle: String { self == .input ? "Mikrofony" : "Głośniki i słuchawki" }
+    var title: String { self == .input ? String(localized: "Input") : String(localized: "Output") }
+    var longTitle: String {
+        self == .input ? String(localized: "Microphones") : String(localized: "Speakers & Headphones")
+    }
     var symbol: String { self == .input ? "mic.fill" : "speaker.wave.2.fill" }
 }
 
@@ -114,7 +116,7 @@ enum AudioHAL {
                 && scalar.value != 0x200E && scalar.value != 0x200F
         }
         let name = String(String.UnicodeScalarView(scalars)).trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !name.isEmpty else { return "Nieznane urządzenie" }
+        guard !name.isEmpty else { return String(localized: "Unknown Device") }
         return name.count > maxNameLength ? String(name.prefix(maxNameLength)) + "…" : name
     }
 

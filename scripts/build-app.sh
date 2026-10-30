@@ -1,5 +1,5 @@
 #!/bin/zsh
-# Buduje AudioPin.app w katalogu dist/ (ad-hoc podpis, do prywatnego użytku).
+# Builds dist/AudioPin.app (ad-hoc signed, for building from source).
 set -euo pipefail
 APP_NAME="AudioPin"
 ROOT="${0:A:h:h}"
@@ -17,7 +17,7 @@ cp "$BIN" "$OUT/Contents/MacOS/$APP_NAME"
 cp Resources/Info.plist "$OUT/Contents/Info.plist"
 printf 'APPL????' > "$OUT/Contents/PkgInfo"
 
-# Ikona (generowana raz i zapisywana w Resources/AppIcon.icns)
+# App icon (rendered once and kept in Resources/AppIcon.icns)
 if [[ ! -f Resources/AppIcon.icns ]]; then
   TMP="$(mktemp -d)"
   trap 'rm -rf "$TMP"' EXIT
@@ -31,7 +31,10 @@ if [[ ! -f Resources/AppIcon.icns ]]; then
 fi
 cp Resources/AppIcon.icns "$OUT/Contents/Resources/AppIcon.icns"
 
+# Localizations: compile the String Catalog into <lang>.lproj/Localizable.strings
+xcrun xcstringstool compile Resources/Localizable.xcstrings --output-directory "$OUT/Contents/Resources"
+
 plutil -lint "$OUT/Contents/Info.plist" >/dev/null
 codesign --force --sign - --timestamp=none --options runtime "$OUT"
 codesign --verify --strict "$OUT"
-echo "Gotowe: $OUT"
+echo "Built: $OUT"

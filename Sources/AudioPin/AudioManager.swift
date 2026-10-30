@@ -143,7 +143,7 @@ final class AudioManager {
         guard let list = PriorityPolicy.promote(uid, in: settings.priority(direction)) else { return }
         settings.setPriority(list, for: direction)
         limiter.reset(direction)
-        log(direction, "Ustawiono jako ulubione: \(list[0].name)")
+        log(direction, String(localized: "Set as favorite: \(list[0].name)"))
     }
 
     func move(_ direction: Direction, from source: IndexSet, to destination: Int) {
@@ -265,7 +265,7 @@ final class AudioManager {
         guard result.changed else { return }
         settings.setPriority(result.list, for: direction)
         if settings.didRunOnboarding {
-            result.added.forEach { log(direction, "Nowe urządzenie: \($0.name)") }
+            result.added.forEach { log(direction, String(localized: "New device: \($0.name)")) }
         }
     }
 
@@ -291,19 +291,19 @@ final class AudioManager {
         case .inBackoff:
             return
         case .startedBackoff:
-            log(direction, "System ciągle przełącza urządzenie — wstrzymuję korekty na 30 s")
+            log(direction, String(localized: "The system keeps switching devices — pausing corrections for 30 s"))
             scheduleAfterBackoff(direction)
             return
         case .allowed:
             break
         }
 
-        let previous = defaultDevice(direction)?.name ?? "inne urządzenie"
+        let previous = defaultDevice(direction)?.name ?? String(localized: "another device")
         // Failed attempts count against the limit too, so a device that refuses can't cause a loop.
         limiter.record(direction, now: now)
         guard system.setDefaultDevice(target.objectID, for: direction) else {
             Self.logger.error("Failed to set default \(direction.rawValue, privacy: .public) device")
-            log(direction, "Nie udało się ustawić: \(target.name)")
+            log(direction, String(localized: "Could not switch to \(target.name)"))
             return
         }
         Self.logger.info("Corrected default \(direction.rawValue, privacy: .public) device")

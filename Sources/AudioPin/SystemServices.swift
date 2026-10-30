@@ -45,7 +45,8 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
 
     func post(_ direction: Direction, _ message: String) {
         let content = UNMutableNotificationContent()
-        content.title = direction == .input ? "Przywrócono mikrofon" : "Przywrócono wyjście dźwięku"
+        content.title = direction == .input
+            ? String(localized: "Microphone restored") : String(localized: "Sound output restored")
         content.body = message
         let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
         UNUserNotificationCenter.current().add(request)

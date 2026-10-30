@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-/// Okienko otwierane z ikony w pasku menu.
+/// Popover shown from the menu bar icon.
 struct MenuBarView: View {
     @Environment(AudioManager.self) private var manager
     @Environment(\.openWindow) private var openWindow
@@ -35,21 +35,21 @@ struct MenuBarView: View {
                 Text(statusText).font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
-            Toggle("Aktywny", isOn: $manager.settings.isActive)
+            Toggle("Active", isOn: $manager.settings.isActive)
                 .toggleStyle(.switch)
                 .labelsHidden()
                 .controlSize(.small)
-                .help(manager.settings.isActive ? "Wstrzymaj pilnowanie urządzeń" : "Wznów pilnowanie urządzeń")
+                .help(manager.settings.isActive ? String(localized: "Pause AudioPin") : String(localized: "Resume AudioPin"))
         }
         .padding(.horizontal, 4)
     }
 
     private var statusText: String {
-        guard manager.settings.isActive else { return "Wstrzymany — system wybiera sam" }
+        guard manager.settings.isActive else { return String(localized: "Paused — macOS chooses devices") }
         switch manager.correctionCount {
-        case 0: return "Pilnuje Twoich urządzeń"
-        case 1: return "Pilnuje · 1 korekta w tej sesji"
-        default: return "Pilnuje · korekty w tej sesji: \(manager.correctionCount)"
+        case 0: return String(localized: "Keeping your devices pinned")
+        case 1: return String(localized: "Pinned · 1 correction this session")
+        default: return String(localized: "Pinned · \(manager.correctionCount) corrections this session")
         }
     }
 
@@ -58,7 +58,7 @@ struct MenuBarView: View {
             Button {
                 openWindow(id: SettingsWindow.id)
             } label: {
-                Label("Ustawienia…", systemImage: "gearshape")
+                Label("Settings…", systemImage: "gearshape")
             }
             .keyboardShortcut(",")
             Spacer()
@@ -68,16 +68,16 @@ struct MenuBarView: View {
                 }
             } label: {
                 Image(systemName: "slider.horizontal.3")
-                    .accessibilityLabel("Ustawienia dźwięku macOS")
+                    .accessibilityLabel("macOS Sound Settings")
             }
-            .help("Otwórz ustawienia dźwięku macOS")
+            .help("Open macOS Sound Settings")
             Button {
                 NSApp.terminate(nil)
             } label: {
                 Image(systemName: "power")
-                    .accessibilityLabel("Zakończ AudioPin")
+                    .accessibilityLabel("Quit AudioPin")
             }
-            .help("Zakończ AudioPin")
+            .help("Quit AudioPin")
             .keyboardShortcut("q")
         }
         .buttonStyle(.borderless)
@@ -85,7 +85,7 @@ struct MenuBarView: View {
     }
 }
 
-/// Sekcja jednego kierunku: aktualne urządzenie, głośność i podłączone urządzenia wg priorytetu.
+/// One direction: connected devices in priority order and the volume of the current one.
 private struct DirectionSection: View {
     @Environment(AudioManager.self) private var manager
     let direction: Direction
@@ -104,14 +104,14 @@ private struct DirectionSection: View {
                     .foregroundStyle(.secondary)
                 Spacer()
                 if !manager.settings.enforces(direction) {
-                    Text("bez pilnowania").font(.caption2).foregroundStyle(.orange)
+                    Text("not pinned").font(.caption2).foregroundStyle(.orange)
                 }
             }
             .padding(.horizontal, 6)
 
             VStack(spacing: 2) {
                 if rows.isEmpty {
-                    Text("Brak podłączonych urządzeń")
+                    Text("No connected devices")
                         .font(.callout).foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(8)
@@ -181,11 +181,11 @@ private struct DeviceRow: View {
                 Spacer(minLength: 4)
                 if !device.isEnabled {
                     Image(systemName: "nosign").foregroundStyle(.secondary)
-                        .help("Wyłączone z automatycznego wyboru")
-                        .accessibilityLabel("Wyłączone z automatycznego wyboru")
+                        .help("Excluded from automatic selection")
+                        .accessibilityLabel("Excluded from automatic selection")
                 } else if isCurrent {
                     Image(systemName: "checkmark").fontWeight(.semibold).foregroundStyle(Color.accentColor)
-                        .accessibilityLabel("W użyciu")
+                        .accessibilityLabel("In use")
                 }
             }
             .padding(.horizontal, 6)
@@ -195,13 +195,15 @@ private struct DeviceRow: View {
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
-        .help("Kliknij, aby ustawić jako ulubione (pierwsze na liście)")
+        .help("Click to make this your favorite (first in the list)")
         .contextMenu {
-            Button("Ustaw jako ulubione") { manager.makeTopPriority(device.uid, direction) }
-            Button("Przesuń wyżej") { manager.move(device.uid, direction, by: -1) }
-            Button("Przesuń niżej") { manager.move(device.uid, direction, by: 1) }
+            Button("Make Favorite") { manager.makeTopPriority(device.uid, direction) }
+            Button("Move Up") { manager.move(device.uid, direction, by: -1) }
+            Button("Move Down") { manager.move(device.uid, direction, by: 1) }
             Divider()
-            Button(device.isEnabled ? "Wyłącz z automatycznego wyboru" : "Włącz automatyczny wybór") {
+            Button(device.isEnabled
+                ? String(localized: "Exclude from Automatic Selection")
+                : String(localized: "Include in Automatic Selection")) {
                 manager.setEnabled(!device.isEnabled, uid: device.uid, direction)
             }
         }
@@ -211,7 +213,11 @@ private struct DeviceRow: View {
         var parts: [String] = []
         if let rank { parts.append("#\(rank)") }
         parts.append(DeviceStyle.transportName(device.transport))
-        if !device.isEnabled { parts.append("wyłączone") } else if isCurrent { parts.append("w użyciu") }
+        if !device.isEnabled {
+            parts.append(String(localized: "disabled"))
+        } else if isCurrent {
+            parts.append(String(localized: "in use"))
+        }
         return parts.joined(separator: " · ")
     }
 }
@@ -223,14 +229,14 @@ private struct LaunchAtLoginOffer: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Label("Uruchamiać AudioPin po zalogowaniu?", systemImage: "power.circle")
+            Label("Open AudioPin at login?", systemImage: "power.circle")
                 .font(.callout.weight(.medium))
-            Text("Bez tego Twoje urządzenia będą pilnowane dopiero po ręcznym otwarciu aplikacji.")
+            Text("Otherwise your devices are only pinned after you open the app yourself.")
                 .font(.caption).foregroundStyle(.secondary)
             HStack {
-                Button("Nie teraz") { manager.settings.didOfferLaunchAtLogin = true }
+                Button("Not Now") { manager.settings.didOfferLaunchAtLogin = true }
                 Spacer()
-                Button("Włącz") {
+                Button("Turn On") {
                     loginItem.setEnabled(true)
                     manager.settings.didOfferLaunchAtLogin = true
                 }
