@@ -54,6 +54,16 @@
     "AudioPin": {
       "shouldTranslate": false
     },
+    "AudioPin (paused)": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AudioPin (wstrzymany)"
+          }
+        }
+      }
+    },
     "AudioPin Settings": {
       "localizations": {
         "pl": {

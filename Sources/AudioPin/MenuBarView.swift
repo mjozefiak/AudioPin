@@ -25,8 +25,8 @@ struct MenuBarView: View {
     private var header: some View {
         @Bindable var manager = manager
         return HStack(spacing: 10) {
-            Image(systemName: manager.settings.isActive ? "pin.fill" : "pin.slash")
-                .font(.title3)
+            Image(nsImage: manager.settings.isActive ? BrandMark.active : BrandMark.paused)
+                .renderingMode(.template)
                 .foregroundStyle(manager.settings.isActive ? Color.accentColor : .secondary)
                 .frame(width: 32, height: 32)
                 .glassEffect(.regular, in: .circle)
