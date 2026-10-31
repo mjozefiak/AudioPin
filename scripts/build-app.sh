@@ -22,10 +22,12 @@ if [[ ! -f Resources/AppIcon.icns ]]; then
   TMP="$(mktemp -d)"
   trap 'rm -rf "$TMP"' EXIT
   swift scripts/make-icon.swift "$TMP/icon.png"
+  swift scripts/make-icon.swift "$TMP/icon-small.png" --small   # simplified mark for 16/32 px
   ICONSET="$TMP/AppIcon.iconset"; mkdir -p "$ICONSET"
+  src() { (( $1 <= 32 )) && echo "$TMP/icon-small.png" || echo "$TMP/icon.png"; }
   for s in 16 32 128 256 512; do
-    sips -z $s $s "$TMP/icon.png" --out "$ICONSET/icon_${s}x${s}.png" >/dev/null
-    sips -z $((s*2)) $((s*2)) "$TMP/icon.png" --out "$ICONSET/icon_${s}x${s}@2x.png" >/dev/null
+    sips -z $s $s "$(src $s)" --out "$ICONSET/icon_${s}x${s}.png" >/dev/null
+    sips -z $((s*2)) $((s*2)) "$(src $((s*2)))" --out "$ICONSET/icon_${s}x${s}@2x.png" >/dev/null
   done
   iconutil -c icns "$ICONSET" -o Resources/AppIcon.icns
 fi
