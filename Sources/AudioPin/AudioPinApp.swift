@@ -96,13 +96,17 @@ struct MenuBarLabel: View {
     @Environment(AudioManager.self) private var manager
 
     var body: some View {
-        let symbol = !manager.settings.isActive ? "pin.slash"
-            : manager.isFlashing ? "checkmark.circle.fill" : "pin.fill"
         if manager.settings.showNameInMenuBar, let name = manager.defaultDevice(.input)?.name {
-            Label(name, systemImage: symbol).labelStyle(.titleAndIcon)
+            Label { Text(name) } icon: { icon }.labelStyle(.titleAndIcon)
         } else {
-            Image(systemName: symbol)
-                .accessibilityLabel("AudioPin")
+            icon
         }
+    }
+
+    private var icon: some View {
+        let active = manager.settings.isActive
+        let image = !active ? Image(nsImage: BrandMark.paused)
+            : manager.isFlashing ? Image(systemName: "checkmark.circle.fill") : Image(nsImage: BrandMark.active)
+        return image.accessibilityLabel(active ? "AudioPin" : "AudioPin (paused)")
     }
 }
