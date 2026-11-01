@@ -136,7 +136,7 @@ final class RouteSpike {
             say("Could not read the tap UID")
             return false
         }
-        let uid = "dev.mjozefiak.AudioPin.route.spike.\(UUID().uuidString)"
+        let uid = "\(RouteDeviceFilter.uidPrefix)spike.\(UUID().uuidString)"
         let composition: [String: Any] = [
             kAudioAggregateDeviceNameKey: "AudioPin Route (spike)",
             kAudioAggregateDeviceUIDKey: uid,
