@@ -63,6 +63,6 @@ Land the part of the per-app audio spec that the spec itself allows before its P
 
 ### Phase 3: Model and policy
 
-- [ ] 3.1 Add AppRule and settings fields
-- [ ] 3.2 Add AppAudioPolicy
-- [ ] 3.3 Add RouteDeviceFilter and apply it in AudioManager
+- [x] 3.1 Add AppRule and settings fields — 1605287
+- [x] 3.2 Add AppAudioPolicy — 27c4bd3
+- [x] 3.3 Add RouteDeviceFilter and apply it in AudioManager — d56f562
