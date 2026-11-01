@@ -50,6 +50,8 @@ Land the part of the per-app audio spec that the spec itself allows before its P
 
 ## Progress
 
+PR: #13
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Agent rules
@@ -66,3 +68,7 @@ Land the part of the per-app audio spec that the spec itself allows before its P
 - [x] 3.1 Add AppRule and settings fields — 1605287
 - [x] 3.2 Add AppAudioPolicy — 27c4bd3
 - [x] 3.3 Add RouteDeviceFilter and apply it in AudioManager — d56f562
+
+### Phase 4: Review follow-ups
+
+- [x] 4.1 Apply om-auto-review-pr findings — 1cb8338
