@@ -257,7 +257,7 @@ A new pane between *Input* and *Activity* (symbol `app.badge`):
 
 ## 📋 Phasing
 
-1. **Phase 0, Spike (gate):** narrow the agent rules (Q1 confirmed), in `AGENTS.md` and `CODE_REVIEW.md`. Then prove the tap → aggregate → device path with gain, in-place mode, sub-device and process-list updates, closed microphone inputs, and permission detection on the target OS. No user-facing change. Results are appended to this spec and reviewed before Phase 2. If the spike disproves the warm-route design, this spec is revised rather than worked around.
+1. **Phase 0, Spike (gate):** narrow the agent rules in `AGENTS.md` and `CODE_REVIEW.md` (Q1 confirmed). Then prove the tap → aggregate → device path with gain, in-place mode, sub-device and process-list updates, closed microphone inputs, and permission detection on the target OS. No user-facing change. Results are appended to this spec and reviewed before Phase 2. If the spike disproves the warm-route design, this spec is revised rather than worked around.
 2. **Phase 1, Model + policy:** `AppRule`, settings fields, `AppAudioPolicy`, `RouteDeviceFilter`, tests. No visible change.
 3. **Phase 2, Router + controller:** real routing and volume driven by rules, still with no UI. The controller is created only in `#if DEBUG` builds, and rules come only through a debug path.
 4. **Phase 3, Settings → Apps pane, permission flow, docs:** the `#if DEBUG` gate on the controller is removed, and the feature becomes visible in Settings. README, the landing page and the release notes change in this phase, so no release build claims "No permissions needed" next to a feature that needs it.
