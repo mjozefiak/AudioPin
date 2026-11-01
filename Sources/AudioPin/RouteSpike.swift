@@ -26,15 +26,10 @@ struct RouteSpikeRequest: Equatable {
         }
         let bundleID = String(value[..<first])
         let device = String(value[value.index(after: first)..<last])
-        guard isValidBundleID(bundleID), !device.isEmpty,
+        guard AppRule.isValidBundleID(bundleID), !device.isEmpty,
               let percent = Float(value[value.index(after: last)...]), (0...100).contains(percent)
         else { return nil }
         return RouteSpikeRequest(bundleID: bundleID, deviceUID: device == "default" ? nil : device, volume: percent / 100)
-    }
-
-    static func isValidBundleID(_ value: String) -> Bool {
-        !value.isEmpty && value.utf8.count <= 255
-            && value.unicodeScalars.allSatisfy { $0.isASCII && (CharacterSet.alphanumerics.contains($0) || $0 == "." || $0 == "-") }
     }
 }
 
