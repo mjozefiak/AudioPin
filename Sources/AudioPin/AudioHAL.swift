@@ -109,6 +109,11 @@ enum AudioHAL {
     /// Device names come from the device itself (Bluetooth names are chosen by the peer).
     /// Strip control and bidirectional-override characters so a name can't spoof other UI text.
     static func sanitizedName(_ raw: String?) -> String {
+        sanitizedNameIfAny(raw) ?? String(localized: "Unknown Device")
+    }
+
+    /// Like `sanitizedName`, but `nil` when nothing printable is left.
+    static func sanitizedNameIfAny(_ raw: String?) -> String? {
         let scalars = (raw ?? "").unicodeScalars.filter { scalar in
             !CharacterSet.controlCharacters.contains(scalar)
                 && !(0x202A...0x202E).contains(scalar.value)
@@ -116,7 +121,7 @@ enum AudioHAL {
                 && scalar.value != 0x200E && scalar.value != 0x200F
         }
         let name = String(String.UnicodeScalarView(scalars)).trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !name.isEmpty else { return String(localized: "Unknown Device") }
+        guard !name.isEmpty else { return nil }
         return name.count > maxNameLength ? String(name.prefix(maxNameLength)) + "…" : name
     }
 

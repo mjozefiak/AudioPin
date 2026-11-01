@@ -1,3 +1,4 @@
+import CoreAudio
 import Foundation
 import Testing
 @testable import AudioPin
@@ -102,6 +103,26 @@ struct AudioManagerTests {
         system.systemOutput = Sample.speakers.objectID
         manager.start()
         #expect(system.systemOutput == Sample.airPodsOut.objectID)
+        manager.stop()
+    }
+
+    @Test func ownRouteAggregatesNeverEnterPriorityListsOrBecomeDefault() {
+        let route = AudioDevice(
+            objectID: 200, uid: "\(RouteDeviceFilter.uidPrefix)com.spotify.client", name: "AudioPin Route",
+            modelUID: nil, transport: kAudioDeviceTransportTypeAggregate, direction: .output)
+        let routeInput = AudioDevice(
+            objectID: 200, uid: route.uid, name: route.name, modelUID: nil,
+            transport: kAudioDeviceTransportTypeAggregate, direction: .input)
+        let (manager, system, store) = makeManager(
+            inputs: [routeInput, Sample.usbMic], outputs: [route, Sample.airPodsOut, Sample.speakers])
+        manager.start()
+        #expect(!store.stored.outputPriority.contains { $0.uid == route.uid })
+        #expect(!store.stored.inputPriority.contains { $0.uid == route.uid })
+        #expect(!manager.devices(.output).contains(route))
+
+        system.defaultOutput = route.objectID
+        manager.reconcile()
+        #expect(system.defaultOutput == Sample.airPodsOut.objectID)
         manager.stop()
     }
 }

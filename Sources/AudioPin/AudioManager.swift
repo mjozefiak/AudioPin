@@ -247,7 +247,7 @@ final class AudioManager {
 
     private func refreshDevices() {
         for direction in Direction.allCases {
-            let list = system.devices(direction)
+            let list = system.devices(direction).filter { !RouteDeviceFilter.isOwnRouteDevice(uid: $0.uid) }
             let gone = Set(devices(direction).map(\.uid)).subtracting(list.map(\.uid))
             connected[direction] = list
             if !gone.isEmpty {
