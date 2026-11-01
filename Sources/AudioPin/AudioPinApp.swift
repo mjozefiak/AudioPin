@@ -6,6 +6,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let manager = AudioManager()
     let loginItem = LoginItem()
     private var observers: [any NSObjectProtocol] = []
+    #if DEBUG
+    private var routeSpike: RouteSpike?
+    #endif
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Only one instance at a time.
@@ -26,6 +29,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         loginItem.refresh()
         #if DEBUG
         if PreviewMode.isEnabled { PreviewMode.scheduleSnapshot() }
+        if let request = RouteSpikeRequest.fromArguments(CommandLine.arguments) {
+            routeSpike = RouteSpike(request)
+            routeSpike?.start()
+        }
         #endif
     }
 
@@ -47,6 +54,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        #if DEBUG
+        routeSpike?.stop()
+        #endif
         manager.stop()
         observers.forEach { NSWorkspace.shared.notificationCenter.removeObserver($0) }
     }
