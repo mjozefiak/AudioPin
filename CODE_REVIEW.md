@@ -1,6 +1,6 @@
 # Code review rules
 
-These rules apply in addition to the `om-code-review` built-in checklist. The validation gate is `swift build` followed by `swift test`. A PR that fails it is not reviewable.
+These rules apply in addition to the `om-code-review` built-in checklist. The validation gate is `swift build` followed by `swift test`. A PR that fails it cannot be approved; the failure is a blocker finding reported with the full review.
 
 ## Priorities
 
