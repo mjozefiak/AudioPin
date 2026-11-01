@@ -54,12 +54,12 @@ Land the part of the per-app audio spec that the spec itself allows before its P
 
 ### Phase 1: Agent rules
 
-- [ ] 1.1 Amend AGENTS.md and CODE_REVIEW.md per Q1
+- [x] 1.1 Amend AGENTS.md and CODE_REVIEW.md per Q1 — 9b9a2c7
 
 ### Phase 2: Spike harness
 
-- [ ] 2.1 Add RouteIOProc kernel with tests
-- [ ] 2.2 Add debug-only --route-test spike flag
+- [x] 2.1 Add RouteIOProc kernel with tests — ed3f5f7
+- [x] 2.2 Add debug-only --route-test spike flag — 4e11f72
 
 ### Phase 3: Model and policy
 
