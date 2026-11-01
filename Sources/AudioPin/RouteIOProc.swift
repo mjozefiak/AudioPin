@@ -40,9 +40,10 @@ final class RouteIOState: Sendable {
         let outputs = UnsafeMutableAudioBufferListPointer(output)
 
         // The first input buffer with data is the tap: the target's own input streams are switched off.
+        // Index loops only: no iterator or slice types on the real-time thread.
         var tap: AudioBuffer?
-        for buffer in inputs where buffer.mData != nil && buffer.mDataByteSize > 0 {
-            tap = buffer
+        for index in 0..<inputs.count where inputs[index].mData != nil && inputs[index].mDataByteSize > 0 {
+            tap = inputs[index]
             break
         }
 
@@ -50,8 +51,10 @@ final class RouteIOState: Sendable {
             signal.store(true, ordering: .relaxed)
         }
 
-        guard let tap, !probing.load(ordering: .relaxed), let first = outputs.first else {
-            for buffer in outputs { RouteKernel.silence(RouteKernel.mutableSamples(buffer)) }
+        guard let tap, !probing.load(ordering: .relaxed), outputs.count > 0 else {
+            for index in 0..<outputs.count { RouteKernel.silence(RouteKernel.mutableSamples(outputs[index])) }
+            // The output was silent, so the next active buffer must ramp up from 0, not step in mid-waveform.
+            appliedGainBits.store(Float(0).bitPattern, ordering: .relaxed)
             return
         }
 
@@ -59,12 +62,13 @@ final class RouteIOState: Sendable {
         let to = Float(bitPattern: targetGainBits.load(ordering: .relaxed))
         appliedGainBits.store(to.bitPattern, ordering: .relaxed)
 
+        let first = outputs[0]
         RouteKernel.render(
             input: RouteKernel.samples(tap), inputChannels: Int(tap.mNumberChannels),
             output: RouteKernel.mutableSamples(first), outputChannels: Int(first.mNumberChannels),
             fromGain: from, toGain: to)
         // Channels 1–2 of the first output stream carry the app; any further streams stay silent.
-        for buffer in outputs.dropFirst() { RouteKernel.silence(RouteKernel.mutableSamples(buffer)) }
+        for index in 1..<outputs.count { RouteKernel.silence(RouteKernel.mutableSamples(outputs[index])) }
     }
 
     /// The IOProc block for `AudioDeviceCreateIOProcIDWithBlock`.
@@ -99,7 +103,8 @@ enum RouteKernel {
     }
 
     static func containsSignal(_ samples: UnsafeBufferPointer<Float>) -> Bool {
-        for sample in samples where sample != 0 { return true }
+        guard let base = samples.baseAddress else { return false }
+        for index in 0..<samples.count where base[index] != 0 { return true }
         return false
     }
 
@@ -156,6 +161,34 @@ enum RouteKernel {
         let written = frames * outputChannels
         if written < output.count {
             (out + written).update(repeating: 0, count: output.count - written)
+        }
+    }
+}
+
+/// Which input streams of a route aggregate carry the tap, decided from channel counts.
+///
+/// The aggregate lists the target device's input streams and the tap's streams in an order Core Audio does
+/// not document. Turning on the wrong one would open the target's microphone, so the order is never assumed:
+/// each possible order is checked against the streams' channel counts, and an ambiguous or inconsistent
+/// layout yields `nil` (the route is refused as `deviceUnavailable`).
+enum RouteStreamLayout {
+    /// - Returns: per aggregate input stream, `true` = on (tap), `false` = off (target input); `nil` when unsure.
+    static func tapStreams(aggregate: [UInt32], targetInputs: [UInt32], tapChannels: UInt32) -> [Bool]? {
+        let tapCount = aggregate.count - targetInputs.count
+        guard tapCount > 0, tapChannels > 0 else { return nil }
+        if targetInputs.isEmpty {
+            return aggregate.allSatisfy { $0 == tapChannels } ? Array(repeating: true, count: tapCount) : nil
+        }
+        let tap = Array(repeating: tapChannels, count: tapCount)
+        let targetFirst = aggregate == targetInputs + tap
+        let tapFirst = aggregate == tap + targetInputs
+        switch (targetFirst, tapFirst) {
+        case (true, false):
+            return Array(repeating: false, count: targetInputs.count) + Array(repeating: true, count: tapCount)
+        case (false, true):
+            return Array(repeating: true, count: tapCount) + Array(repeating: false, count: targetInputs.count)
+        default:
+            return nil
         }
     }
 }

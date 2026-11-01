@@ -72,7 +72,7 @@ struct RouteIOProcTests {
 
         init(tap: [Float], tapChannels: UInt32, outputs: [(frames: Int, channels: UInt32)], disabledInputs: Int = 0) {
             input = AudioBufferList.allocate(maximumBuffers: disabledInputs + 1)
-            for i in 0..<disabledInputs { input[i] = AudioBuffer(mNumberChannels: 1, mDataByteSize: 0, mData: nil) }
+            for i in 0..<disabledInputs { input[i] = AudioBuffer(mNumberChannels: 1, mDataByteSize: 512, mData: nil) }
             input[disabledInputs] = Self.buffer(tap, channels: tapChannels)
             output = AudioBufferList.allocate(maximumBuffers: outputs.count)
             for (i, spec) in outputs.enumerated() {
@@ -129,5 +129,63 @@ struct RouteIOProcTests {
         #expect(lists.samples(output: 0) == [0.75, 0.5, 0.25, 0])
         lists.run(state)
         #expect(lists.samples(output: 0) == [0, 0, 0, 0])
+    }
+
+    @Test func firstActiveBufferAfterProbeRampsUpFromSilence() {
+        let lists = Lists(tap: [1, 1, 1, 1], tapChannels: 1, outputs: [(4, 1)])
+        let state = RouteIOState(gain: 1, isProbing: true)
+        lists.run(state)
+        #expect(lists.samples(output: 0) == [0, 0, 0, 0])
+        state.isProbing = false
+        lists.run(state)
+        #expect(lists.samples(output: 0) == [0.25, 0.5, 0.75, 1])
+    }
+
+    @Test func routingWithoutTapDataSilencesEveryOutput() {
+        let lists = Lists(tap: [], tapChannels: 2, outputs: [(2, 2), (1, 2)])
+        let state = RouteIOState(gain: 1, isProbing: false)
+        lists.run(state)
+        #expect(lists.samples(output: 0) == [0, 0, 0, 0])
+        #expect(lists.samples(output: 1) == [0, 0])
+    }
+
+    @Test func longTapIsCutToTheOutputLength() {
+        let out = render([1, 2, 3, 4, 5, 6], inChannels: 2, outFrames: 2, outChannels: 2, from: 1, to: 1)
+        #expect(out == [1, 2, 3, 4])
+    }
+
+    @Test func missingOutputBufferIsHarmless() {
+        let input: [Float] = [1, 1]
+        input.withUnsafeBufferPointer { inp in
+            RouteKernel.render(input: inp, inputChannels: 2, output: UnsafeMutableBufferPointer(start: nil, count: 0),
+                               outputChannels: 2, fromGain: 1, toGain: 1)
+            RouteKernel.silence(UnsafeMutableBufferPointer(start: nil, count: 0))
+        }
+        #expect(input == [1, 1])
+    }
+
+    // MARK: Stream layout (which aggregate input streams carry the tap)
+
+    @Test func tapAfterTargetInputs() {
+        #expect(RouteStreamLayout.tapStreams(aggregate: [1, 2], targetInputs: [1], tapChannels: 2) == [false, true])
+    }
+
+    @Test func tapBeforeTargetInputs() {
+        #expect(RouteStreamLayout.tapStreams(aggregate: [2, 1], targetInputs: [1], tapChannels: 2) == [true, false])
+    }
+
+    @Test func targetWithoutInputsKeepsEverythingOn() {
+        #expect(RouteStreamLayout.tapStreams(aggregate: [2], targetInputs: [], tapChannels: 2) == [true])
+    }
+
+    @Test(arguments: [
+        ([2, 2], [2], 2),   // stereo microphone: both orders fit, refuse
+        ([1, 1], [1], 2),   // no stream has the tap's format
+        ([1], [1], 2),      // no tap stream at all
+        ([2, 1, 3], [1], 2), // unexpected extra stream
+        ([2], [], 0),       // unknown tap format
+    ] as [([UInt32], [UInt32], UInt32)])
+    func ambiguousOrInconsistentLayoutIsRefused(aggregate: [UInt32], target: [UInt32], tap: UInt32) {
+        #expect(RouteStreamLayout.tapStreams(aggregate: aggregate, targetInputs: target, tapChannels: tap) == nil)
     }
 }

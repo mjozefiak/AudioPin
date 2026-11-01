@@ -99,4 +99,25 @@ struct AppRuleTests {
         rule.deviceUID = "airpods"
         #expect(!rule.isNeutral)
     }
+
+    @Test func nonObjectElementsAreDropped() throws {
+        let settings = try decode(#"{"appRules": [42, null, "x", {"bundleID": "com.apple.Music", "volume": 0.5}]}"#)
+        #expect(settings.appRules.map(\.bundleID) == ["com.apple.Music"])
+    }
+
+    @Test func namesWithNothingPrintableFallBack() throws {
+        let settings = try decode("""
+        {"appRules": [{"bundleID": "com.spotify.client", "appName": "\\u202E\\u200F", "deviceName": "",
+                       "deviceUID": "usb", "isMuted": true}]}
+        """)
+        let rule = try #require(settings.appRules.first)
+        #expect(rule.appName == "com.spotify.client")
+        #expect(rule.deviceName == nil)
+    }
+
+    @Test func wronglyTypedShowAppsInMenuFallsBackToTheDefault() throws {
+        let settings = try decode(#"{"isActive": false, "showAppsInMenu": "yes"}"#)
+        #expect(settings.isActive == false)
+        #expect(settings.showAppsInMenu == true)
+    }
 }

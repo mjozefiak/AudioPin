@@ -59,7 +59,7 @@ final class RouteSpike {
 
     init(_ request: RouteSpikeRequest) {
         self.request = request
-        state = RouteIOState(gain: request.volume * request.volume, isProbing: true)
+        state = RouteIOState(gain: AppAudioPolicy.gain(forVolume: request.volume, muted: false), isProbing: true)
     }
 
     func start() {
@@ -168,17 +168,21 @@ final class RouteSpike {
     }
 
     /// Switches off every aggregate input stream that belongs to the target device, so its microphone
-    /// never opens. Assumes the aggregate lists the sub-device's input streams before the tap's; the
-    /// logged layout is what the spike checks (no microphone indicator, no HFP switch).
+    /// never opens. The tap's streams are told apart by channel count (`RouteStreamLayout`); when that is
+    /// ambiguous the route is refused rather than risk opening the microphone.
     private func disableTargetInputs(target: AudioDevice, procID: AudioDeviceIOProcID) -> Bool {
-        let total = AudioHAL.streamCount(aggregateID, .input)
-        let targetInputs = AudioHAL.streamCount(target.objectID, .input)
-        say("Aggregate input streams: \(total) (target owns \(targetInputs), tap owns \(total - targetInputs))")
-        guard targetInputs > 0 else { return true }
-        guard total > targetInputs else {
-            say("No tap stream left after disabling the target's inputs; refusing (deviceUnavailable)")
+        let aggregate = streamChannels(aggregateID)
+        let targetInputs = streamChannels(target.objectID)
+        let tapChannels = tapFormatChannels()
+        say("Aggregate input stream channels \(aggregate); target input streams \(targetInputs); tap \(tapChannels) ch")
+        guard let layout = RouteStreamLayout.tapStreams(
+            aggregate: aggregate, targetInputs: targetInputs, tapChannels: tapChannels)
+        else {
+            say("Cannot tell the tap stream from the target's input streams; refusing (deviceUnavailable)")
             return false
         }
+        guard !targetInputs.isEmpty else { return true }
+        let total = aggregate.count
 
         let header = MemoryLayout<AudioHardwareIOProcStreamUsage>.offset(of: \.mStreamIsOn) ?? 12
         let size = header + total * MemoryLayout<UInt32>.size
@@ -198,7 +202,7 @@ final class RouteSpike {
             return false
         }
         let flags = (raw + header).bindMemory(to: UInt32.self, capacity: total)
-        for index in 0..<total { flags[index] = index < targetInputs ? 0 : 1 }
+        for index in 0..<total { flags[index] = layout[index] ? 1 : 0 }
         status = AudioObjectSetPropertyData(aggregateID, &addr, 0, nil, UInt32(size), raw)
         guard status == noErr else {
             say("Setting IOProc stream usage failed: \(status); refusing (deviceUnavailable)")
@@ -248,12 +252,14 @@ final class RouteSpike {
         }
         guard let tapDescription else { return }
         tapDescription.muteBehavior = .muted
+        // The property value is an object reference, so its size is a pointer's.
         var description = tapDescription
         var addr = AudioHAL.address(kAudioTapPropertyDescription)
         let status = withUnsafeMutablePointer(to: &description) {
-            AudioObjectSetPropertyData(tapID, &addr, 0, nil, UInt32(MemoryLayout<CATapDescription>.size), $0)
+            AudioObjectSetPropertyData(tapID, &addr, 0, nil, UInt32(MemoryLayout<UnsafeRawPointer>.size), $0)
         }
         guard status == noErr else {
+            tapDescription.muteBehavior = .unmuted
             say("Muting the tap in place failed: \(status); staying in probe (app keeps playing on its device)")
             return
         }
@@ -262,6 +268,29 @@ final class RouteSpike {
     }
 
     // MARK: Diagnostics
+
+    /// Channel count of each input stream of a device, in the device's stream order.
+    private func streamChannels(_ device: AudioObjectID) -> [UInt32] {
+        var addr = AudioHAL.address(kAudioDevicePropertyStreams, kAudioObjectPropertyScopeInput)
+        var size: UInt32 = 0
+        guard AudioObjectGetPropertyDataSize(device, &addr, 0, nil, &size) == noErr, size > 0 else { return [] }
+        var ids = [AudioStreamID](repeating: 0, count: Int(size) / MemoryLayout<AudioStreamID>.size)
+        guard AudioObjectGetPropertyData(device, &addr, 0, nil, &size, &ids) == noErr else { return [] }
+        return ids.prefix(Int(size) / MemoryLayout<AudioStreamID>.size).map { stream in
+            format(stream, kAudioStreamPropertyVirtualFormat)?.mChannelsPerFrame ?? 0
+        }
+    }
+
+    private func tapFormatChannels() -> UInt32 {
+        format(tapID, kAudioTapPropertyFormat)?.mChannelsPerFrame ?? 0
+    }
+
+    private func format(_ object: AudioObjectID, _ selector: AudioObjectPropertySelector) -> AudioStreamBasicDescription? {
+        var addr = AudioHAL.address(selector)
+        var value = AudioStreamBasicDescription()
+        var size = UInt32(MemoryLayout<AudioStreamBasicDescription>.size)
+        return AudioObjectGetPropertyData(object, &addr, 0, nil, &size, &value) == noErr ? value : nil
+    }
 
     private func isAppRunningOutput() -> Bool {
         var addr = AudioHAL.address(kAudioHardwarePropertyProcessObjectList)

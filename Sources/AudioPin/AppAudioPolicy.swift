@@ -51,10 +51,11 @@ enum AppAudioPolicy {
 
     /// The rule that owns a process, so each process is tapped at most once.
     /// An exact bundle-ID match wins; otherwise the longest rule ID that is a dotted prefix
-    /// (`com.google.Chrome` owns `com.google.Chrome.helper`). Disabled rules own nothing.
+    /// (`com.google.Chrome` owns `com.google.Chrome.helper`). Disabled and neutral rules own nothing,
+    /// so a helper is never pulled out of its parent's route by a rule that changes nothing.
     static func owner(of bundleID: String, rules: [AppRule]) -> AppRule? {
         guard isSupported(bundleID) else { return nil }
-        let enabled = rules.filter(\.isEnabled)
+        let enabled = rules.filter { $0.isEnabled && !$0.isNeutral }
         if let exact = enabled.first(where: { $0.bundleID == bundleID }) { return exact }
         return enabled
             .filter { bundleID.hasPrefix($0.bundleID + ".") }
@@ -75,6 +76,7 @@ enum AppAudioPolicy {
         defaultOutputUID: String?
     ) -> [WarmRoute] {
         guard let defaultOutputUID else { return [] }
+        let rules = AppRule.normalized(rules)
         var owned: [String: Set<String>] = [:]
         for process in processes {
             guard let rule = owner(of: process.bundleID, rules: rules) else { continue }

@@ -48,9 +48,9 @@ struct AppRule: Codable, Identifiable, Hashable, Sendable {
     }
 
     /// App names come from the app bundle; strip spoofing characters like device names do.
+    /// Falls back to the bundle ID when nothing printable is left.
     static func sanitizedAppName(_ raw: String?, bundleID: String) -> String {
-        let trimmed = (raw ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? bundleID : AudioHAL.sanitizedName(trimmed)
+        AudioHAL.sanitizedNameIfAny(raw) ?? bundleID
     }
 
     /// One rule per bundle ID (the first wins) and no neutral rules.
@@ -71,7 +71,7 @@ extension AppRule {
         self.bundleID = bundleID
         appName = Self.sanitizedAppName(try c.decodeIfPresent(String.self, forKey: .appName), bundleID: bundleID)
         deviceUID = try c.decodeIfPresent(String.self, forKey: .deviceUID).flatMap { $0.isEmpty ? nil : $0 }
-        deviceName = try c.decodeIfPresent(String.self, forKey: .deviceName).map { AudioHAL.sanitizedName($0) }
+        deviceName = AudioHAL.sanitizedNameIfAny(try c.decodeIfPresent(String.self, forKey: .deviceName))
         volume = Self.clampedVolume(try c.decodeIfPresent(Float.self, forKey: .volume) ?? 1)
         isMuted = try c.decodeIfPresent(Bool.self, forKey: .isMuted) ?? false
         isEnabled = try c.decodeIfPresent(Bool.self, forKey: .isEnabled) ?? true
@@ -124,7 +124,7 @@ struct AppSettings: Codable, Equatable, Sendable {
         // A malformed rule list must never cost the user their priority lists: drop it instead of throwing.
         let rules = try? c.decodeIfPresent([LossyAppRule].self, forKey: .appRules)
         appRules = rules.map { AppRule.normalized($0.compactMap(\.rule)) } ?? d.appRules
-        showAppsInMenu = try c.decodeIfPresent(Bool.self, forKey: .showAppsInMenu) ?? d.showAppsInMenu
+        showAppsInMenu = (try? c.decodeIfPresent(Bool.self, forKey: .showAppsInMenu)) ?? d.showAppsInMenu
     }
 
     func priority(_ direction: Direction) -> [KnownDevice] {

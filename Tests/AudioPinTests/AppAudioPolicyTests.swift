@@ -170,4 +170,28 @@ struct AppAudioPolicyTests {
     func gainCurve(volume: Float, muted: Bool, expected: Float) {
         #expect(AppAudioPolicy.gain(forVolume: volume, muted: muted) == expected)
     }
+
+    @Test func recentButDisabledRuleGetsNoRoute() {
+        #expect(routes([rule("com.spotify.client", device: Self.airPods, enabled: false)], [],
+                       recent: ["com.spotify.client"]).isEmpty)
+    }
+
+    @Test func quitAppWithPassthroughRuleKeepsAPassthroughRoute() throws {
+        let route = try #require(routes([rule("com.spotify.client", device: Self.speakers)], [],
+                                        recent: ["com.spotify.client"]).first)
+        #expect(route.mode == .passthrough)
+        #expect(route.appRunning == false)
+    }
+
+    @Test func duplicateRulesInMemoryYieldOneRoute() {
+        let result = routes([rule("com.spotify.client", volume: 0.5), rule("com.spotify.client", muted: true)],
+                            [process("com.spotify.client")])
+        #expect(result.map(\.ruleID) == ["com.spotify.client"])
+        #expect(result.first?.gain == 0.25)
+    }
+
+    @Test func neutralRuleDoesNotClaimHelpers() {
+        let rules = [rule("com.google.Chrome", volume: 0.5), rule("com.google.Chrome.helper")]
+        #expect(AppAudioPolicy.owner(of: "com.google.Chrome.helper", rules: rules)?.bundleID == "com.google.Chrome")
+    }
 }
